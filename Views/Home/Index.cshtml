@@ -1,0 +1,377 @@
+﻿@* 
+    Homepage (Home/Index.cshtml)
+    Purpose: Display homepage with hero section, featured products, and benefits
+    Question 4: Views - Razor templates with Bootstrap
+*@
+
+@model dynamic
+
+@{
+    ViewData["Title"] = "Home - SmartGear Online";
+}
+
+<!-- Hero Section with Call-to-Action -->
+<div class="hero-section" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/images/hero-bg-stadium.jpg'); background-size: cover; background-position: center; color: white; padding: 120px 0; text-align: center; margin-bottom: 50px;">
+    <div class="container">
+        <h1 class="display-3 fw-bold mb-3">Welcome to SmartGear Online</h1>
+        <p class="lead mb-4">Customize Your Team Gear - Fast, Easy & Professional</p>
+
+        <!-- Call-to-Action Button -->
+        <a asp-action="Index" asp-controller="Product" class="btn btn-primary btn-lg me-3">
+            <i class="fas fa-shopping-bag me-2"></i> SHOP NOW
+        </a>
+
+        <a href="#featured" class="btn btn-outline-light btn-lg">
+            <i class="fas fa-arrow-down me-2"></i> See Featured Products
+        </a>
+    </div>
+</div>
+
+<!-- Featured Products Section -->
+<section id="featured" class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Featured Products</h2>
+
+        <div class="row">
+            @* Product Card 1 *@
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow-sm product-card h-100">
+                    <img src="~/images/products/jersey1.jpg" class="card-img-top" alt="Nike Custom Jersey" style="height: 250px; object-fit: cover;">
+
+                    <div class="card-body d-flex flex-column">
+                        <span class="badge bg-primary mb-2">Jerseys</span>
+                        <h5 class="card-title">Nike Custom Jersey 2024</h5>
+                        <p class="card-text text-muted flex-grow-1">
+                            High-quality custom team jersey with personalized name & number customization options.
+                        </p>
+
+                        <div class="mb-3">
+                            <h6 class="text-primary fw-bold">$89.99</h6>
+                            <small class="text-success">✓ In Stock (50 available)</small>
+                        </div>
+
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Details" asp-controller="Product" asp-route-id="1"
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle me-1"></i> Details
+                            </a>
+
+                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="1"
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-palette me-1"></i> Customize
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Product Card 2 *@
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow-sm product-card h-100">
+                    <img src="~/images/products/shoe1.jpg" class="card-img-top" alt="Adidas Soccer Shoe" style="height: 250px; object-fit: cover;">
+
+                    <div class="card-body d-flex flex-column">
+                        <span class="badge bg-success mb-2">Shoes</span>
+                        <h5 class="card-title">Adidas Soccer Shoe Professional</h5>
+                        <p class="card-text text-muted flex-grow-1">
+                            Professional soccer shoes with customizable color options and team branding.
+                        </p>
+
+                        <div class="mb-3">
+                            <h6 class="text-primary fw-bold">$129.99</h6>
+                            <small class="text-success">✓ In Stock (35 available)</small>
+                        </div>
+
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Details" asp-controller="Product" asp-route-id="2"
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle me-1"></i> Details
+                            </a>
+
+                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="2"
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-palette me-1"></i> Customize
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Product Card 3 *@
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow-sm product-card h-100">
+                    <img src="~/images/products/gear1.jpg" class="card-img-top" alt="Sports Training Gear" style="height: 250px; object-fit: cover;">
+
+                    <div class="card-body d-flex flex-column">
+                        <span class="badge bg-warning mb-2">Gear</span>
+                        <h5 class="card-title">Sports Training Gear Set</h5>
+                        <p class="card-text text-muted flex-grow-1">
+                            Complete training gear set with team logo embroidery and custom color matching.
+                        </p>
+
+                        <div class="mb-3">
+                            <h6 class="text-primary fw-bold">$199.99</h6>
+                            <small class="text-success">✓ In Stock (20 available)</small>
+                        </div>
+
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Details" asp-controller="Product" asp-route-id="3"
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle me-1"></i> Details
+                            </a>
+
+                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="3"
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-palette me-1"></i> Customize
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View All Products Button -->
+        <div class="text-center mt-4">
+            <a asp-action="Index" asp-controller="Product" class="btn btn-primary btn-lg">
+                View All Products <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Benefits Section -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Why Choose SmartGear?</h2>
+
+        <div class="row">
+            <div class="col-md-6 col-lg-3 text-center mb-4">
+                <div class="mb-3">
+                    <i class="fas fa-rocket fa-3x text-primary"></i>
+                </div>
+                <h5>Fast Customization</h5>
+                <p class="text-muted">
+                    Customize your gear in minutes with our intuitive online designer.
+                </p>
+            </div>
+
+            <div class="col-md-6 col-lg-3 text-center mb-4">
+                <div class="mb-3">
+                    <i class="fas fa-eye fa-3x text-primary"></i>
+                </div>
+                <h5>Real-Time Preview</h5>
+                <p class="text-muted">
+                    See exactly how your custom gear looks before placing your order.
+                </p>
+            </div>
+
+            <div class="col-md-6 col-lg-3 text-center mb-4">
+                <div class="mb-3">
+                    <i class="fas fa-lock fa-3x text-primary"></i>
+                </div>
+                <h5>Secure Payments</h5>
+                <p class="text-muted">
+                    Your payment information is encrypted and safe with our platform.
+                </p>
+            </div>
+
+            <div class="col-md-6 col-lg-3 text-center mb-4">
+                <div class="mb-3">
+                    <i class="fas fa-shipping-fast fa-3x text-primary"></i>
+                </div>
+                <h5>Fast Shipping</h5>
+                <p class="text-muted">
+                    Get your custom gear delivered quickly and track it every step of the way.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">What Our Customers Say</h2>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+
+                        <p class="card-text">
+                            "SmartGear made it so easy to customize our team jerseys! The quality is outstanding and delivery was fast."
+                        </p>
+
+                        <p class="card-text">
+                            <strong>- Coach Johnson</strong><br>
+                            <small class="text-muted">Johannesburg FC</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+
+                        <p class="card-text">
+                            "The real-time preview feature is incredible. I could see exactly what my custom gear would look like!"
+                        </p>
+
+                        <p class="card-text">
+                            <strong>- Sarah Themba</strong><br>
+                            <small class="text-muted">Sports Manager</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                            <i class="fas fa-star text-warning"></i>
+                        </div>
+
+                        <p class="card-text">
+                            "Best customer service I've experienced. They helped me perfect my order and it arrived perfectly."
+                        </p>
+
+                        <p class="card-text">
+                            <strong>- Thabo Nkosi</strong><br>
+                            <small class="text-muted">Team Captain</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call-to-Action Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center">
+        <h2 class="mb-4">Ready to Customize Your Team Gear?</h2>
+        <p class="lead mb-4">
+            Join hundreds of teams and organizations that trust SmartGear for their custom apparel needs.
+        </p>
+
+        <a asp-action="Index" asp-controller="Product" class="btn btn-light btn-lg me-3">
+            <i class="fas fa-shopping-bag me-2"></i> Start Shopping
+        </a>
+
+        <button type="button" class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#contactModal">
+            <i class="fas fa-envelope me-2"></i> Contact Us
+        </button>
+    </div>
+</section>
+
+<!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="contactModalLabel">Contact SmartGear</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="contactName" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="contactName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contactEmail" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="contactEmail" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contactSubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="contactSubject" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="contactMessage" class="form-label">Message</label>
+                        <textarea class="form-control" id="contactMessage" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Send Message</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Homepage animations and interactions
+        document.addEventListener('DOMContentLoaded', function () {
+            // Animate product cards on scroll
+            const cards = document.querySelectorAll('.product-card');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.5s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+}
+
+@section Styles {
+    <style>
+        .hero-section {
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        .product-card img:hover {
+            filter: brightness(1.1);
+        }
+    </style>
+}

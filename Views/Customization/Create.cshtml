@@ -1,0 +1,226 @@
+﻿@*
+    Customization Page (Customization/Create.cshtml)
+    Purpose: Allow customers to customize products with real-time preview
+    Question 4: Views - Interactive customization with JavaScript preview
+*@
+
+@using SmartGear_Online.Models
+@model Product
+
+@{
+    ViewData["Title"] = "Customize - " + Model.ProductName;  // FIXED: Changed & to +
+}
+
+<div class="container-fluid my-5">
+    <div class="row">
+        <!-- LEFT SIDE: Product Preview -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm sticky-top" style="top: 100px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-eye me-2"></i> Live Preview</h5>
+                </div>
+
+                <div class="card-body text-center p-5">
+                    <div class="position-relative mb-4" style="height: 400px; overflow: hidden;">
+                        <img id="previewImage" src="@Model.ImageUrl" alt="@Model.ProductName" style="width: 100%; height: 100%; object-fit: contain;">
+                        <div id="colorOverlay" class="position-absolute top-0 start-0 w-100 h-100" style="background-color: rgba(255, 0, 0, 0); pointer-events: none;"></div>
+                        @if (!string.IsNullOrEmpty(ViewBag.CustomText))
+                        {
+                            <div class="position-absolute bottom-0 start-50 translate-middle-x bg-dark text-white px-3 py-2 rounded">
+                                <p id="textPreview" class="mb-0 fw-bold">@ViewBag.CustomText</p>
+                            </div>
+                        }
+                    </div>
+
+                    <h4 class="mb-2">@Model.ProductName</h4>
+                    <p class="text-muted mb-3">@Model.Description</p>
+
+                    <div class="mb-4 pb-4 border-bottom">
+                        <p class="text-muted mb-2">Base Price</p>
+                        <h3 class="text-primary fw-bold">$<span id="displayPrice">@Model.Price.ToString("F2")</span></h3>
+                    </div>
+
+                    <div class="bg-light p-3 rounded">
+                        <h6 class="fw-bold mb-3">Your Customization:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><strong>Color:</strong> <span id="summaryColor">Select a color</span></li>
+                            <li class="mb-2"><strong>Logo:</strong> <span id="summaryLogo">No logo uploaded</span></li>
+                            <li class="mb-2"><strong>Custom Text:</strong> <span id="summaryText">None</span></li>
+                            <li class="mb-2"><strong>Quantity:</strong> <span id="summaryQuantity">1</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Customization Form -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-palette me-2"></i> Customize Your @Model.ProductName</h5>
+                </div>
+
+                <div class="card-body">
+                    <form id="customizationForm" method="post" enctype="multipart/form-data" asp-action="Create" asp-controller="Customization">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="productId" value="@Model.ProductId">
+
+                        <!-- STEP 1: SELECT COLOR -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold"><i class="fas fa-palette me-2"></i> Step 1: Select Color</label>
+                            <p class="text-muted small">Choose your preferred color for the product</p>
+                            <div class="row g-2" id="colorSelector">
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorRed" value="Red" class="btn-check" onchange="updatePreview()">
+                                    <label for="colorRed" class="btn btn-outline-danger w-100"><i class="fas fa-circle me-2" style="color: red;"></i> Red</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorBlue" value="Blue" class="btn-check" onchange="updatePreview()" checked>
+                                    <label for="colorBlue" class="btn btn-outline-primary w-100"><i class="fas fa-circle me-2" style="color: blue;"></i> Blue</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorGreen" value="Green" class="btn-check" onchange="updatePreview()">
+                                    <label for="colorGreen" class="btn btn-outline-success w-100"><i class="fas fa-circle me-2" style="color: green;"></i> Green</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorYellow" value="Yellow" class="btn-check" onchange="updatePreview()">
+                                    <label for="colorYellow" class="btn btn-outline-warning w-100"><i class="fas fa-circle me-2" style="color: orange;"></i> Yellow</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorWhite" value="White" class="btn-check" onchange="updatePreview()">
+                                    <label for="colorWhite" class="btn btn-outline-secondary w-100"><i class="fas fa-circle me-2" style="color: gray;"></i> White</label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" name="color" id="colorBlack" value="Black" class="btn-check" onchange="updatePreview()">
+                                    <label for="colorBlack" class="btn btn-outline-dark w-100"><i class="fas fa-circle me-2" style="color: black;"></i> Black</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- STEP 2: UPLOAD LOGO -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold"><i class="fas fa-image me-2"></i> Step 2: Upload Team Logo</label>
+                            <p class="text-muted small">Upload your team logo or emblem (JPG, PNG - Max 5MB)</p>
+                            <div class="input-group mb-3">
+                                <input type="file" class="form-control" id="logoUpload" name="logoFile" accept=".jpg,.jpeg,.png" onchange="handleLogoUpload(event)">
+                                <button class="btn btn-outline-primary" type="button"><i class="fas fa-cloud-upload-alt me-2"></i> Browse</button>
+                            </div>
+                            <div id="logoPreviewContainer" style="display: none;" class="mb-3">
+                                <img id="logoPreview" src="" alt="Logo Preview" style="max-width: 150px; max-height: 150px; border: 1px solid #ddd; padding: 5px; border-radius: 5px;">
+                                <br><small class="text-success"><i class="fas fa-check-circle me-1"></i> Logo uploaded successfully</small>
+                            </div>
+                            <small class="text-muted d-block"><i class="fas fa-info-circle me-1"></i> Logo will be placed in the top-right corner of your customization</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- STEP 3: ADD CUSTOM TEXT -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold"><i class="fas fa-font me-2"></i> Step 3: Add Custom Text</label>
+                            <p class="text-muted small">Add player names, team name, or any custom text (Optional)</p>
+                            <div class="mb-3">
+                                <input type="text" class="form-control form-control-lg" id="customText" name="customText" placeholder="e.g., JOHN SMITH #23" maxlength="50" onchange="updatePreview()" oninput="updatePreview()">
+                                <small class="text-muted d-block mt-2">Character count: <span id="charCount">0</span>/50</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- STEP 4: SELECT QUANTITY -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold"><i class="fas fa-boxes me-2"></i> Step 4: Select Quantity</label>
+                            <p class="text-muted small">How many items would you like to order?</p>
+                            <div class="input-group mb-3">
+                                <button class="btn btn-outline-secondary" type="button" onclick="decrementQuantity()"><i class="fas fa-minus"></i></button>
+                                <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="@Model.QuantityInStock" onchange="updatePreview()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="incrementQuantity()"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <small class="text-muted">Available: @Model.QuantityInStock units</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- PRICE SUMMARY -->
+                        <div class="bg-light p-3 rounded mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2"><span>Unit Price:</span><span>$<span id="unitPrice">@Model.Price.ToString("F2")</span></span></div>
+                            <div class="d-flex justify-content-between align-items-center mb-2"><span>Quantity:</span><span id="quantityDisplay">1</span></div>
+                            <div class="border-top pt-2 d-flex justify-content-between align-items-center"><strong>Total:</strong><h5 class="text-primary fw-bold mb-0">$<span id="totalPrice">@Model.Price.ToString("F2")</span></h5></div>
+                        </div>
+
+                        <!-- ACTION BUTTONS -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="addToCartBtn"><i class="fas fa-shopping-cart me-2"></i> Add to Cart</button>
+                            <a asp-action="Index" asp-controller="Product" class="btn btn-outline-secondary btn-lg"><i class="fas fa-arrow-left me-2"></i> Continue Shopping</a>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> You can always edit your customization in your shopping cart before checkout.
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const basePrice = @Model.Price;
+
+        function updatePreview() {
+            const selectedColor = document.querySelector('input[name="color"]:checked');
+            if (selectedColor) {
+                document.getElementById('summaryColor').textContent = selectedColor.value;
+                const colorMap = { 'Red': 'rgba(255, 0, 0, 0.2)', 'Blue': 'rgba(0, 0, 255, 0.2)', 'Green': 'rgba(0, 128, 0, 0.2)', 'Yellow': 'rgba(255, 255, 0, 0.2)', 'White': 'rgba(255, 255, 255, 0.1)', 'Black': 'rgba(0, 0, 0, 0.3)' };
+                document.getElementById('colorOverlay').style.backgroundColor = colorMap[selectedColor.value] || 'rgba(255, 0, 0, 0.2)';
+            }
+            const customText = document.getElementById('customText').value;
+            document.getElementById('summaryText').textContent = customText || 'None';
+            document.getElementById('textPreview').textContent = customText;
+            document.getElementById('charCount').textContent = customText.length;
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            document.getElementById('summaryQuantity').textContent = quantity;
+            document.getElementById('quantityDisplay').textContent = quantity;
+            const totalPrice = (basePrice * quantity).toFixed(2);
+            document.getElementById('totalPrice').textContent = totalPrice;
+            document.getElementById('displayPrice').textContent = totalPrice;
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) { alert('File size must be less than 5MB'); event.target.value = ''; return; }
+                if (!['image/jpeg', 'image/png'].includes(file.type)) { alert('Please upload a JPG or PNG file'); event.target.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('logoPreview').src = e.target.result;
+                    document.getElementById('logoPreviewContainer').style.display = 'block';
+                    document.getElementById('summaryLogo').textContent = file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function incrementQuantity() {
+            const quantityInput = document.getElementById('quantity');
+            const maxQuantity = parseInt(quantityInput.max);
+            const currentValue = parseInt(quantityInput.value) || 1;
+            if (currentValue < maxQuantity) { quantityInput.value = currentValue + 1; updatePreview(); }
+        }
+
+        function decrementQuantity() {
+            const quantityInput = document.getElementById('quantity');
+            const currentValue = parseInt(quantityInput.value) || 1;
+            if (currentValue > 1) { quantityInput.value = currentValue - 1; updatePreview(); }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { updatePreview(); });
+    </script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/customization.css" />
+}

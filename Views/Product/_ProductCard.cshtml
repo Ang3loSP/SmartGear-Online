@@ -1,0 +1,57 @@
+﻿<!-- Question 4: Partial View (Reusable) for product card -->
+<!-- Displayed in a grid on Products/Index.cshtml -->
+@model Product
+
+@{
+    ViewData["Title"] = @Model.ProductName;
+}
+
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-6">
+            <img src="@Model.ImageUrl" class="img-fluid rounded shadow-sm" alt="@Model.ProductName">
+        </div>
+        <div class="col-md-6">
+            <span class="badge bg-secondary mb-2">@Model.Category</span>
+            <h1 class="mb-3">@Model.ProductName</h1>
+            <h3 class="text-primary mb-3">$@Model.Price.ToString("F2")</h3>
+
+            @if (Model.QuantityInStock > 0)
+            {
+                <p class="text-success mb-3"><i class="fas fa-check-circle me-1"></i> In Stock (@Model.QuantityInStock available)</p>
+            }
+            else
+            {
+                <p class="text-danger mb-3"><i class="fas fa-times-circle me-1"></i> Out of Stock</p>
+            }
+
+            <p>@Model.Description</p>
+
+            <form asp-controller="Cart" asp-action="AddToCart" method="post" class="mt-4">
+                <input type="hidden" name="productId" value="@Model.ProductId">
+                <div class="row g-3">
+                    <div class="col-auto">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="quantity" class="form-control" value="1" min="1" max="@Model.QuantityInStock" style="width: 80px;">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-lg d-block" @(Model.QuantityInStock == 0 ? "disabled" : "")>
+                            <i class="fas fa-shopping-cart me-2"></i> Add to Cart
+                        </button>
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label">&nbsp;</label>
+                        <a asp-controller="Customization" asp-action="Create" asp-route-productId="@Model.ProductId" class="btn btn-outline-primary btn-lg d-block">
+                            <i class="fas fa-palette me-2"></i> Customize
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <a asp-controller="Product" asp-action="Index" class="btn btn-link mt-3">
+                <i class="fas fa-arrow-left me-1"></i> Back to Products
+            </a>
+        </div>
+    </div>
+</div>

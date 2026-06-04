@@ -1,0 +1,116 @@
+﻿// ================================================
+// BUTTON COMPONENTS
+// Consistent button styling across all pages
+// ================================================
+
+.btn {
+    border-radius: $border-radius-md;
+    padding: 0.6rem 1.2rem;
+    font-weight: $font-weight-bold;
+    transition: all $transition-normal;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+    // Ripple effect
+    &:after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    &:active:after {
+        width: 200px;
+        height: 200px;
+        opacity: 0;
+    }
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, $primary-color, $primary-dark);
+    border: none;
+
+    &:hover {
+        background: linear-gradient(135deg, $primary-dark, darken($primary-dark, 5%));
+        box-shadow: 0 4px 12px rgba($primary-color, 0.4);
+    }
+}
+
+.btn-success {
+    background: linear-gradient(135deg, $success-color, darken($success-color, 10%));
+    border: none;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba($success-color, 0.4);
+    }
+}
+
+.btn-outline-primary {
+    border: 2px solid $primary-color;
+    color: $primary-color;
+
+    &:hover {
+        background-color: $primary-color;
+        color: white;
+    }
+}
+
+// Button sizes
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: $font-size-sm;
+}
+
+.btn-lg {
+    padding: 0.8rem 1.6rem;
+    font-size: $font-size-lg;
+}
+
+// Icon buttons
+.btn-icon {
+    padding: 0.6rem;
+    border-radius: $border-radius-round;
+
+    i {
+        margin: 0;
+    }
+}
+
+// Loading state
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+
+    &:after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        top: 50%;
+        left: 50%;
+        margin: -10px 0 0 -10px;
+        border: 2px solid white;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.8s linear infinite;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

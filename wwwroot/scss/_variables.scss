@@ -1,0 +1,70 @@
+﻿// ================================================
+// SASS VARIABLES
+// Consistent theming across the application
+// ================================================
+
+// Color Palette
+$primary-color: #0d6efd;
+$primary-dark: #0b5ed7;
+$primary-light: #3b82f6;
+
+$secondary-color: #6c757d;
+$success-color: #198754;
+$danger-color: #dc3545;
+$warning-color: #ffc107;
+$info-color: #0dcaf0;
+
+$dark-color: #212529;
+$light-color: #f8f9fa;
+
+// Gray Scale
+$gray-100: #f8f9fa;
+$gray-200: #e9ecef;
+$gray-300: #dee2e6;
+$gray-400: #ced4da;
+$gray-500: #adb5bd;
+$gray-600: #6c757d;
+$gray-700: #495057;
+$gray-800: #343a40;
+$gray-900: #212529;
+
+// Typography
+$font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-size-base: 1rem;
+$font-size-lg: 1.25rem;
+$font-size-sm: 0.875rem;
+$font-weight-normal: 400;
+$font-weight-bold: 700;
+
+// Spacing
+$spacing-unit: 8px;
+$spacing-xs: $spacing-unit;
+$spacing-sm: $spacing-unit * 2;
+$spacing-md: $spacing-unit * 3;
+$spacing-lg: $spacing-unit * 4;
+$spacing-xl: $spacing-unit * 6;
+$spacing-xxl: $spacing-unit * 8;
+
+// Border Radius
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+$border-radius-round: 50%;
+
+// Shadows
+$shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+$shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+$shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+$shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-normal: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// Breakpoints
+$breakpoint-mobile: 576px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 992px;
+$breakpoint-large: 1200px;

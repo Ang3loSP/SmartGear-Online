@@ -1,0 +1,261 @@
+﻿@*
+    Product Catalog (Product/Index.cshtml)
+    Purpose: Display products with search, filtering, and pagination
+    Question 4: Views - Responsive product grid with sidebar filter
+*@
+
+@using SmartGear_Online.Models
+@model List<Product>
+
+@{
+    ViewData["Title"] = "Products - SmartGear Online";
+}
+
+<div class="container-fluid my-5">
+    <div class="row">
+        <!-- LEFT SIDEBAR: Category Filter -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm sticky-top" style="top: 100px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i> Filters
+                    </h5>
+                </div>
+
+                <div class="card-body">
+                    <!-- Search Box -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Search Products</label>
+                        <form asp-action="Search" asp-controller="Product" method="get" class="input-group">
+                            <input type="text" name="query" class="form-control" placeholder="Search..." required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Categories</h6>
+                        <div class="list-group">
+                            <a href="@Url.Action("Index", "Product")" class="list-group-item list-group-item-action">
+                                <i class="fas fa-cube me-2"></i> All Products
+                            </a>
+                            <a href="@Url.Action("GetByCategory", "Product", new { categoryName = "jerseys" })" class="list-group-item list-group-item-action">
+                                <i class="fas fa-shirt me-2"></i> Jerseys
+                                <span class="badge bg-primary float-end">12</span>
+                            </a>
+                            <a href="@Url.Action("GetByCategory", "Product", new { categoryName = "shoes" })" class="list-group-item list-group-item-action">
+                                <i class="fas fa-shoe-prints me-2"></i> Shoes
+                                <span class="badge bg-primary float-end">8</span>
+                            </a>
+                            <a href="@Url.Action("GetByCategory", "Product", new { categoryName = "gear" })" class="list-group-item list-group-item-action">
+                                <i class="fas fa-backpack me-2"></i> Gear
+                                <span class="badge bg-primary float-end">15</span>
+                            </a>
+                            <a href="@Url.Action("GetByCategory", "Product", new { categoryName = "hats" })" class="list-group-item list-group-item-action">
+                                <i class="fas fa-hat-cowboy me-2"></i> Hats
+                                <span class="badge bg-primary float-end">5</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Price Filter -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Price Range</h6>
+                        <div class="d-flex gap-2 mb-2">
+                            <input type="number" class="form-control form-control-sm" id="priceMin" placeholder="Min" value="0">
+                            <input type="number" class="form-control form-control-sm" id="priceMax" placeholder="Max" value="500">
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary w-100" onclick="filterByPrice()">Apply Price Filter</button>
+                    </div>
+
+                    <!-- Stock Filter -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Stock Status</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="inStockOnly" checked>
+                            <label class="form-check-label" for="inStockOnly">In Stock Only</label>
+                        </div>
+                    </div>
+
+                    <!-- Clear Filters -->
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-redo me-2"></i> Clear All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Products Display -->
+        <div class="col-md-9">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>Product Catalog</h2>
+                    <p class="text-muted">
+                        @if (Model != null && Model.Count > 0)
+                        {
+                            <span>Showing @Model.Count products</span>
+                        }
+                        else
+                        {
+                            <span>No products available</span>
+                        }
+                    </p>
+                </div>
+
+                <!-- Sort Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-sort me-2"></i> Sort By
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="sortDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="sortBy('name')">Name (A-Z)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="sortBy('price-asc')">Price (Low to High)</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="sortBy('price-desc')">Price (High to Low)</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            @if (Model != null && Model.Count > 0)
+            {
+                <div class="row" id="productsGrid">
+                    @foreach (var product in Model)
+                    {
+                        <!-- Product Card -->
+                        <div class="col-md-6 col-lg-4 mb-4 product-item" data-price="@product.Price" data-category="@product.Category" data-stock="@product.QuantityInStock">
+                            <div class="card shadow-sm product-card h-100">
+                                <!-- Product Image -->
+                                <div class="position-relative overflow-hidden" style="height: 250px;">
+                                    <img src="@product.ImageUrl" class="card-img-top h-100" alt="@product.ProductName" style="object-fit: cover;">
+
+                                    @if (product.QuantityInStock == 0)
+                                    {
+                                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.7);">
+                                            <span class="text-white fw-bold">OUT OF STOCK</span>
+                                        </div>
+                                    }
+                                    else if (product.QuantityInStock < 5)
+                                    {
+                                        <span class="badge bg-danger position-absolute top-0 end-0 m-3">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> Low Stock
+                                        </span>
+                                    }
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="card-body d-flex flex-column">
+                                    <span class="badge bg-secondary mb-2 align-self-start">@product.Category</span>
+                                    <h5 class="card-title">@product.ProductName</h5>
+                                    <p class="card-text text-muted flex-grow-1" style="font-size: 0.9rem;">
+                                        @(product.Description?.Length > 60 ? product.Description.Substring(0, 60) + "..." : product.Description)
+                                    </p>
+
+                                    <div class="mb-3 pb-3 border-bottom">
+                                        <h6 class="text-primary fw-bold mb-2">$@product.Price.ToString("F2")</h6>
+                                        @if (product.QuantityInStock > 0)
+                                        {
+                                            <small class="text-success">
+                                                <i class="fas fa-check-circle me-1"></i> In Stock (@product.QuantityInStock available)
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-danger">
+                                                <i class="fas fa-times-circle me-1"></i> Out of Stock
+                                            </small>
+                                        }
+                                    </div>
+
+                                    <div class="btn-group w-100" role="group">
+                                        <a asp-action="Details" asp-controller="Product" asp-route-id="@product.ProductId" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i> Details
+                                        </a>
+                                        @if (product.QuantityInStock > 0)
+                                        {
+                                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="@product.ProductId" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-palette me-1"></i> Customize
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-secondary btn-sm" disabled>Unavailable</button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination -->
+                <nav aria-label="Page navigation" class="mt-5">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                    </ul>
+                </nav>
+            }
+            else
+            {
+                <div class="alert alert-info text-center py-5">
+                    <i class="fas fa-info-circle fa-3x mb-3"></i>
+                    <h4>No Products Found</h4>
+                    <p class="mb-3">Sorry, we couldn't find any products matching your criteria.</p>
+                    <a asp-action="Index" asp-controller="Product" class="btn btn-primary">View All Products</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function filterByPrice() {
+            const minPrice = parseFloat(document.getElementById('priceMin').value) || 0;
+            const maxPrice = parseFloat(document.getElementById('priceMax').value) || Infinity;
+            document.querySelectorAll('.product-item').forEach(item => {
+                const price = parseFloat(item.dataset.price);
+                item.style.display = (price >= minPrice && price <= maxPrice) ? 'block' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('priceMin').value = '0';
+            document.getElementById('priceMax').value = '500';
+            document.getElementById('inStockOnly').checked = true;
+            document.querySelectorAll('.product-item').forEach(item => item.style.display = 'block');
+        }
+
+        function sortBy(criterion) {
+            const grid = document.getElementById('productsGrid');
+            const items = Array.from(grid.querySelectorAll('.product-item'));
+            items.sort((a, b) => {
+                switch(criterion) {
+                    case 'name': return a.querySelector('.card-title').textContent.localeCompare(b.querySelector('.card-title').textContent);
+                    case 'price-asc': return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                    case 'price-desc': return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+                    default: return 0;
+                }
+            });
+            grid.innerHTML = '';
+            items.forEach(item => grid.appendChild(item));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.addEventListener('mouseenter', function() { this.classList.add('shadow-lg'); });
+                card.addEventListener('mouseleave', function() { this.classList.remove('shadow-lg'); });
+            });
+        });
+    </script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/product.css" />
+}

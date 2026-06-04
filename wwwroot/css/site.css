@@ -1,0 +1,386 @@
+/* ================================================ */
+/* QUESTION 7: CUSTOM CSS FOR CONSISTENT LOOK & FEEL */
+/* ================================================ */
+
+/* Global Styles */
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --dark-color: #212529;
+    --light-color: #f8f9fa;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f5f7fb;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+/* ================================================ */
+/* Navigation Bar Styling */
+/* ================================================ */
+
+.navbar {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 0.8rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    letter-spacing: -0.5px;
+}
+
+    .navbar-brand i {
+        font-size: 1.8rem;
+    }
+
+.nav-link {
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+    .nav-link:hover {
+        transform: translateY(-2px);
+    }
+
+    .nav-link.active {
+        font-weight: 700;
+        border-bottom: 2px solid white;
+    }
+
+/* ================================================ */
+/* Button Styling - Consistent across all pages */
+/* ================================================ */
+
+.btn {
+    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), #0b5ed7);
+    border: none;
+}
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+    }
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #146c43);
+    border: none;
+}
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+
+.btn-outline-primary {
+    border: 2px solid var(--primary-color);
+}
+
+    .btn-outline-primary:hover {
+        transform: translateY(-2px);
+    }
+
+/* ================================================ */
+/* Card Styling - Product Cards, Order Cards */
+/* ================================================ */
+
+.card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+.product-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+    .product-card .card-img-top {
+        height: 250px;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    .product-card .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+/* ================================================ */
+/* Form Styling - Consistent Forms */
+/* ================================================ */
+
+.form-control, .form-select {
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #334155;
+}
+
+/* ================================================ */
+/* Alert Styling */
+/* ================================================ */
+
+.alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d1e7dd, #c3e6cb);
+    color: #0a3622;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #842029;
+}
+
+/* ================================================ */
+/* Badge Styling */
+/* ================================================ */
+
+.badge {
+    padding: 0.5rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: #ffc107;
+    color: #856404;
+}
+
+.status-confirmed {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.status-production {
+    background-color: #6c757d;
+    color: white;
+}
+
+.status-shipped {
+    background-color: #007bff;
+    color: white;
+}
+
+.status-delivered {
+    background-color: #28a745;
+    color: white;
+}
+
+.status-cancelled {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* ================================================ */
+/* Cart Styling */
+/* ================================================ */
+
+.cart-item {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+    .cart-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
+
+.cart-summary {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+/* ================================================ */
+/* Order Tracking Timeline */
+/* ================================================ */
+
+.timeline {
+    position: relative;
+    padding: 2rem 0;
+}
+
+.timeline-step {
+    position: relative;
+    padding-bottom: 2rem;
+}
+
+    .timeline-step::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 30px;
+        bottom: -20px;
+        width: 2px;
+        background-color: #dee2e6;
+    }
+
+    .timeline-step:last-child::before {
+        display: none;
+    }
+
+.timeline-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #dee2e6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.timeline-step.completed .timeline-icon {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.timeline-step.active .timeline-icon {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.2);
+}
+
+/* ================================================ */
+/* Dashboard Cards */
+/* ================================================ */
+
+.dashboard-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+    .dashboard-card h3 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0;
+    }
+
+    .dashboard-card .icon {
+        font-size: 2.5rem;
+        opacity: 0.7;
+    }
+
+/* ================================================ */
+/* Responsive Design */
+/* ================================================ */
+
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+
+    .btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .card .card-img-top {
+        height: 180px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .dashboard-card h3 {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card .card-img-top {
+        height: 150px;
+    }
+}
+
+/* ================================================ */
+/* Animation Classes */
+/* ================================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}

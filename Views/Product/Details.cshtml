@@ -1,0 +1,123 @@
+﻿<!-- Question 4: Product Details View -->
+<!-- Shows full product information & customize button -->
+@model Product
+
+@{
+    ViewData["Title"] = Model.ProductName;
+}
+
+<div class="container mt-5">
+    <div class="row">
+
+        <!-- Product Image (Left) -->
+        <div class="col-md-6">
+            <img src="@Model.ImageUrl"
+                 class="img-fluid rounded"
+                 alt="@Model.ProductName"
+                 style="max-height: 500px; object-fit: cover;">
+        </div>
+
+        <!-- Product Details (Right) -->
+        <div class="col-md-6">
+
+            <!-- Category -->
+            <span class="badge bg-secondary mb-3">
+                @Model.Category
+            </span>
+
+            <!-- Product Name -->
+            <h1 class="mb-3">
+                @Model.ProductName
+            </h1>
+
+            <!-- Price -->
+            <h3 class="text-primary mb-3">
+                $@Model.Price.ToString("F2")
+            </h3>
+
+            <!-- Stock Status -->
+            @if (Model.QuantityInStock > 0)
+            {
+                <p class="text-success fw-bold mb-3">
+                    ✓ In Stock (@Model.QuantityInStock available)
+                </p>
+            }
+            else
+            {
+                <p class="text-danger fw-bold mb-3">
+                    Out of Stock
+                </p>
+            }
+
+            <!-- Description -->
+            <h5>Description</h5>
+
+            <p class="mb-4">
+                @Model.Description
+            </p>
+
+            <!-- Customize Form -->
+            @if (Model.QuantityInStock > 0)
+            {
+                <form asp-action="Create"
+                      asp-controller="Customization"
+                      method="get"
+                      class="mb-3">
+
+                    <input type="hidden"
+                           name="productId"
+                           value="@Model.ProductId" />
+
+                    <button type="submit"
+                            class="btn btn-primary btn-lg w-100 mb-2">
+                        🎨 Customize This Product
+                    </button>
+
+                </form>
+            }
+
+            <!-- Add To Cart -->
+            <form asp-action="AddToCart"
+                  asp-controller="Cart"
+                  method="post"
+                  class="mb-3">
+
+                <input type="hidden"
+                       name="productId"
+                       value="@Model.ProductId" />
+
+                <div class="input-group mb-3">
+
+                    <span class="input-group-text">
+                        Quantity:
+                    </span>
+
+                    <input type="number"
+                           name="quantity"
+                           value="1"
+                           min="1"
+                           max="@Model.QuantityInStock"
+                           class="form-control"
+                           style="max-width: 80px;" />
+
+                </div>
+
+                <!-- FIXED BUTTON -->
+                <button type="submit"
+                        class="btn btn-success btn-lg w-100"
+                        disabled="@(Model.QuantityInStock == 0)">
+                    Add to Cart
+                </button>
+
+            </form>
+
+            <!-- Back Link -->
+            <a asp-action="Index"
+               asp-controller="Product"
+               class="btn btn-outline-secondary">
+                ← Back to Catalog
+            </a>
+
+        </div>
+    </div>
+</div>

@@ -1,0 +1,287 @@
+﻿@{
+    ViewData["Title"] = "API Demo - Product Management";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-code me-2"></i>Product Management API Demo</h4>
+                </div>
+                <div class="card-body">
+
+                    <!-- Add Product Form -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="border p-3 rounded">
+                                <h5><i class="fas fa-plus-circle me-2 text-success"></i>Add New Product (POST)</h5>
+                                <div class="mb-2">
+                                    <input type="text" id="productName" class="form-control" placeholder="Product Name">
+                                </div>
+                                <div class="mb-2">
+                                    <select id="productCategory" class="form-select">
+                                        <option value="">Select Category</option>
+                                        <option value="Jerseys">Jerseys</option>
+                                        <option value="Shoes">Shoes</option>
+                                        <option value="Gear">Gear</option>
+                                        <option value="Hats">Hats</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="number" id="productPrice" class="form-control" placeholder="Price" step="0.01">
+                                </div>
+                                <div class="mb-2">
+                                    <textarea id="productDescription" class="form-control" rows="2" placeholder="Description"></textarea>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="text" id="productImageUrl" class="form-control" placeholder="Image URL">
+                                </div>
+                                <button class="btn btn-success w-100" onclick="createProduct()">
+                                    <i class="fas fa-save me-2"></i>Create Product (POST /api/products)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="border p-3 rounded">
+                                <h5><i class="fas fa-search me-2 text-info"></i>Search Products (GET)</h5>
+                                <div class="input-group">
+                                    <input type="text" id="searchQuery" class="form-control" placeholder="Search by name...">
+                                    <button class="btn btn-info" onclick="searchProducts()">
+                                        <i class="fas fa-search me-1"></i>Search
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="loadAllProducts()">
+                                        <i class="fas fa-sync-alt me-1"></i>Show All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products List -->
+                    <h5><i class="fas fa-list me-2 text-primary"></i>Products List</h5>
+                    <div id="productsList" class="row mt-3">
+                        <div class="col-12 text-center text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading products...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // QUESTION 12: JQUERY AJAX API CALLS
+
+        // Load all products on page load
+        $(document).ready(function() {
+            loadAllProducts();
+        });
+
+        // ================================================
+        // GET: Load all products from API
+        // ================================================
+        function loadAllProducts() {
+            $.ajax({
+                url: '/api/products',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        displayProducts(response.data);
+                    } else {
+                        showApiError(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('API Error:', xhr);
+                    showApiError('Failed to load products. Please try again.');
+                }
+            });
+        }
+
+        // ================================================
+        // GET: Search products by query
+        // ================================================
+        function searchProducts() {
+            const query = $('#searchQuery').val().trim();
+
+            if (!query) {
+                loadAllProducts();
+                return;
+            }
+
+            $.ajax({
+                url: `/api/products/search?query=${encodeURIComponent(query)}`,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        displayProducts(response.data);
+                        if (response.data.length === 0) {
+                            $('#productsList').html(`
+                                <div class="col-12 text-center text-muted">
+                                    <i class="fas fa-search me-2"></i>No products found for "${query}"
+                                </div>
+                            `);
+                        }
+                    } else {
+                        showApiError(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    showApiError('Search failed. Please try again.');
+                }
+            });
+        }
+
+        // ================================================
+        // POST: Create new product
+        // ================================================
+        function createProduct() {
+            const productData = {
+                productName: $('#productName').val(),
+                category: $('#productCategory').val(),
+                price: parseFloat($('#productPrice').val()),
+                description: $('#productDescription').val(),
+                imageUrl: $('#productImageUrl').val(),
+                quantityInStock: 100,
+                reorderLevel: 10,
+                isActive: true
+            };
+
+            // Validate required fields
+            if (!productData.productName || !productData.category || !productData.price) {
+                showApiError('Please fill in all required fields (Name, Category, Price)');
+                return;
+            }
+
+            $.ajax({
+                url: '/api/products',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(productData),
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showApiSuccess('Product created successfully!');
+                        // Clear form
+                        $('#productName, #productDescription, #productImageUrl').val('');
+                        $('#productCategory').val('');
+                        $('#productPrice').val('');
+                        // Reload products list
+                        loadAllProducts();
+                    } else {
+                        showApiError(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMsg = 'Failed to create product';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    showApiError(errorMsg);
+                }
+            });
+        }
+
+        // ================================================
+        // DELETE: Remove product
+        // ================================================
+        function deleteProduct(productId, productName) {
+            if (!confirm(`Are you sure you want to delete "${productName}"?`)) {
+                return;
+            }
+
+            $.ajax({
+                url: `/api/products/${productId}`,
+                type: 'DELETE',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showApiSuccess(`Product "${productName}" deleted successfully!`);
+                        loadAllProducts();
+                    } else {
+                        showApiError(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    showApiError('Failed to delete product');
+                }
+            });
+        }
+
+        // ================================================
+        // Helper: Display products in grid
+        // ================================================
+        function displayProducts(products) {
+            if (!products || products.length === 0) {
+                $('#productsList').html(`
+                    <div class="col-12 text-center text-muted">
+                        <i class="fas fa-box-open me-2"></i>No products available
+                    </div>
+                `);
+                return;
+            }
+
+            let html = '';
+            products.forEach(product => {
+                html += `
+                    <div class="col-md-4 col-lg-3 mb-3">
+                        <div class="card h-100 shadow-sm product-card">
+                            <img src="${product.imageUrl || '/images/placeholder.jpg'}"
+                                 class="card-img-top" alt="${product.productName}"
+                                 style="height: 150px; object-fit: cover;">
+                            <div class="card-body">
+                                <span class="badge bg-secondary mb-2">${product.category}</span>
+                                <h6 class="card-title">${product.productName}</h6>
+                                <p class="card-text small text-muted">${product.description?.substring(0, 60) || ''}...</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-primary fw-bold">$${product.price.toFixed(2)}</span>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.productId}, '${product.productName}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            $('#productsList').html(html);
+        }
+
+        // ================================================
+        // Helper: Show error message
+        // ================================================
+        function showApiError(message) {
+            const alertHtml = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#productsList').before(alertHtml);
+            setTimeout(() => $('.alert').fadeOut(), 3000);
+        }
+
+        function showApiSuccess(message) {
+            const alertHtml = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#productsList').before(alertHtml);
+            setTimeout(() => $('.alert').fadeOut(), 3000);
+        }
+    </script>
+}

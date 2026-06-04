@@ -1,0 +1,61 @@
+﻿@using SmartGear_Online.Models.ViewModels
+@model RegisterViewModel
+
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="container my-5" style="max-width: 500px;">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Account</h4>
+        </div>
+        <div class="card-body p-4">
+            <form asp-controller="Account" asp-action="Register" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label">Full Name *</label>
+                    <input asp-for="FullName" class="form-control" required>
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label">Email Address *</label>
+                    <input asp-for="Email" type="email" class="form-control" required>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PhoneNumber" class="form-label">Phone Number *</label>
+                    <input asp-for="PhoneNumber" class="form-control" required>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">Password *</label>
+                    <input asp-for="Password" type="password" class="form-control" required>
+                    <small class="text-muted">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char</small>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label">Confirm Password *</label>
+                    <input asp-for="ConfirmPassword" type="password" class="form-control" required>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
+            </form>
+
+            <hr>
+            <div class="text-center">
+                Already have an account? <a asp-controller="Account" asp-action="Login">Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

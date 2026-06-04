@@ -1,0 +1,99 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using SmartGear_Online.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-3" asp-controller="Home" asp-action="Index">
+            <i class="fas fa-tachometer-alt me-2"></i>SmartGear
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-home me-1"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Product" asp-action="Index">
+                        <i class="fas fa-tshirt me-1"></i> Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Order" asp-action="History">
+                        <i class="fas fa-box me-1"></i> My Orders
+                    </a>
+                </li>
+                @if (User.IsInRole("Admin"))
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-chart-line me-1"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" asp-controller="Admin" asp-action="Dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item" asp-controller="Admin" asp-action="Inventory">Inventory</a></li>
+                            <li><a class="dropdown-item" asp-controller="Admin" asp-action="ManageProducts">Products</a></li>
+                        </ul>
+                    </li>
+                }
+            </ul>
+
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link position-relative" asp-controller="Cart" asp-action="Index">
+                        <i class="fas fa-shopping-cart fa-lg"></i>
+                        <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                    </a>
+                </li>
+
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> @User.Identity?.Name
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">My Profile</a></li>
+                            <li><a class="dropdown-item" asp-controller="Order" asp-action="History">Order History</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="dropdown-item text-danger">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Login</a></li>
+                    <li class="nav-item"><a class="nav-link btn btn-light text-primary px-3 rounded-pill ms-2" asp-controller="Account" asp-action="Register">Register</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+    function updateCartCount() {
+        fetch('/Cart/GetCartCount')
+            .then(response => response.json())
+            .then(count => {
+                const badge = document.getElementById('cartCount');
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            });
+    }
+    document.addEventListener('DOMContentLoaded', updateCartCount);
+</script>

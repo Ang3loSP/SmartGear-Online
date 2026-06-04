@@ -1,0 +1,36 @@
+﻿// ================================================
+// QUESTION 8: SASS MAIN FILE
+// Imports all partials for compilation
+// ================================================
+
+// Import Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Import Custom Variables
+@import 'variables';
+
+// Import Base Styles
+@import 'base';
+
+// Import Components
+@import 'components/buttons';
+@import 'components/cards';
+@import 'components/navigation';
+@import 'components/forms';
+@import 'components/modals';
+
+// Import Layouts
+@import 'layouts/header';
+@import 'layouts/footer';
+@import 'layouts/sidebar';
+
+// Import Pages
+@import 'pages/home';
+@import 'pages/products';
+@import 'pages/cart';
+@import 'pages/checkout';
+@import 'pages/order-tracking';
+@import 'pages/admin-dashboard';
+
+// Import Responsive
+@import 'responsive';

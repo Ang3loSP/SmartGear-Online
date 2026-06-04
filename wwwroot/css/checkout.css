@@ -1,0 +1,35 @@
+﻿.step-indicator {
+    width: 50px;
+    height: 50px;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-weight: bold;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+    .step-indicator.active {
+        background-color: #0d6efd;
+        transform: scale(1.1);
+    }
+
+.sticky-top {
+    top: 100px;
+}
+
+.summary-card {
+    position: sticky;
+    top: 100px;
+}
+
+@media (max-width: 991px) {
+    .summary-card {
+        position: relative !important;
+        top: 0 !important;
+        margin-top: 20px;
+    }
+}

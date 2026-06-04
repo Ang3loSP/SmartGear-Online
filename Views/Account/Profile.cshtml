@@ -1,0 +1,69 @@
+﻿@using SmartGear_Online.Models.ViewModels
+@model ProfileViewModel
+
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Profile Info</h5>
+                </div>
+                <div class="card-body text-center">
+                    <i class="fas fa-user-circle fa-5x text-muted mb-3"></i>
+                    <h4>@Model.FullName</h4>
+                    <p class="text-muted">@Model.Email</p>
+                    <p class="small">Member since @Model.DateRegistered.ToString("MMMM yyyy")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Account Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Full Name:</strong></div>
+                        <div class="col-sm-8">@Model.FullName</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Email:</strong></div>
+                        <div class="col-sm-8">@Model.Email</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Phone:</strong></div>
+                        <div class="col-sm-8">@Model.PhoneNumber</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Member Since:</strong></div>
+                        <div class="col-sm-8">@Model.DateRegistered.ToString("MMMM d, yyyy")</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Last Login:</strong></div>
+                        <div class="col-sm-8">@(Model.LastLoginDate?.ToString("MMMM d, yyyy") ?? "N/A")</div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Total Orders:</strong></div>
+                        <div class="col-sm-8">@Model.TotalOrders</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Total Spent:</strong></div>
+                        <div class="col-sm-8">$@Model.TotalSpent.ToString("F2")</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Average Order:</strong></div>
+                        <div class="col-sm-8">$@Model.AverageOrderValue.ToString("F2")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
