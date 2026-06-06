@@ -15,10 +15,11 @@ namespace SmartGear_Online.Models
 
         [Required]
         [ForeignKey("Customer")]
-        public string CustomerId { get; set; }
+        public string CustomerId { get; set; } = string.Empty;
 
         [Display(Name = "Order Date")]
         public DateTime OrderDate { get; set; } = DateTime.UtcNow;
+
         [Display(Name = "Updated Date")]
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
 
@@ -35,11 +36,11 @@ namespace SmartGear_Online.Models
         [Required(ErrorMessage = "Shipping address is required")]
         [StringLength(500)]
         [Display(Name = "Shipping Address")]
-        public string ShippingAddress { get; set; }
+        public string ShippingAddress { get; set; } = string.Empty;
 
         [StringLength(500)]
         [Display(Name = "Billing Address")]
-        public string BillingAddress { get; set; }
+        public string BillingAddress { get; set; } = string.Empty;
 
         [StringLength(50)]
         [Display(Name = "Shipping Method")]
@@ -47,10 +48,10 @@ namespace SmartGear_Online.Models
 
         [StringLength(100)]
         [Display(Name = "Tracking Number")]
-        public string TrackingNumber { get; set; }
+        public string TrackingNumber { get; set; } = string.Empty;
 
-        // Navigation property
-        public virtual ApplicationUser Customer { get; set; }
+        // Navigation properties
+        public virtual ApplicationUser? Customer { get; set; }
         public virtual ICollection<OrderItem> OrderItems { get; set; }
             = new List<OrderItem>();
 
@@ -71,7 +72,6 @@ namespace SmartGear_Online.Models
         /// </summary>
         public bool CanBeCancelled()
         {
-            // Can only cancel if still pending
             return Status == "Pending" || Status == "Confirmed";
         }
 

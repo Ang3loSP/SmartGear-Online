@@ -1,5 +1,4 @@
-﻿using SmartGear_Online.Models;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -18,21 +17,21 @@ namespace SmartGear_Online.Models
 
         [Required(ErrorMessage = "Color is required")]
         [StringLength(50)]
-        public string Color { get; set; }
+        public string Color { get; set; } = string.Empty;
 
         [StringLength(500)]
         [Display(Name = "Logo Image URL")]
-        public string LogoImageUrl { get; set; }
+        public string LogoImageUrl { get; set; } = string.Empty;
 
         [StringLength(100)]
         [Display(Name = "Custom Text")]
-        public string CustomText { get; set; }
+        public string CustomText { get; set; } = string.Empty;
 
         [Display(Name = "Created Date")]
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation property
-        public virtual Product Product { get; set; }
+        public virtual Product? Product { get; set; }
 
         // ===================================================
         // VALIDATION LOGIC
@@ -40,7 +39,6 @@ namespace SmartGear_Online.Models
 
         public bool IsValidColor(string colorCode)
         {
-            // Validate color format (hex code or color name)
             var validColors = new[] { "Red", "Blue", "Green", "Yellow", "White",
                                      "Black", "Orange", "Purple" };
             return validColors.Contains(colorCode);

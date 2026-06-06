@@ -14,7 +14,6 @@ namespace SmartGear_Online.Controllers
     /// Question 3: Controller for Processing Product Requests
     /// Handles: GET (list, details), POST (create), PUT (update), DELETE
     [Route("[controller]")]
-    [ApiController]
     [ServiceFilter(typeof(LoggingActionFilter))] // Apply logging filter to all actions
     public class ProductController : Controller
     {

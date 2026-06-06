@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using System;
 
-namespace SmartGearOnline.Filters
+namespace SmartGear_Online.Filters
 {
     /// QUESTION 9: GLOBAL EXCEPTION HANDLING
     /// Catches all unhandled exceptions across the application

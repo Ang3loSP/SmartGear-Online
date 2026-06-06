@@ -74,13 +74,13 @@ namespace SmartGear_Online.Services
         public decimal HighestOrderValue { get; set; }
 
         // Comparison metrics (vs previous period)
-        public decimal RevenueChange { get; set; } // Percentage
-        public int OrdersChange { get; set; } // Percentage
+        public decimal RevenueChange { get; set; }
+        public int OrdersChange { get; set; }
 
         // Breakdown
-        public List<DailyRevenue> DailyBreakdown { get; set; }
-        public List<CategoryRevenue> CategoryBreakdown { get; set; }
-        public List<TopProduct> TopProducts { get; set; }
+        public List<DailyRevenue> DailyBreakdown { get; set; } = new List<DailyRevenue>();
+        public List<CategoryRevenue> CategoryBreakdown { get; set; } = new List<CategoryRevenue>();
+        public List<TopProduct> TopProducts { get; set; } = new List<TopProduct>();
     }
 
     public class DailyRevenue
@@ -93,7 +93,7 @@ namespace SmartGear_Online.Services
 
     public class CategoryRevenue
     {
-        public string CategoryName { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
         public decimal Revenue { get; set; }
         public int ItemsSold { get; set; }
         public int OrderCount { get; set; }
@@ -103,8 +103,8 @@ namespace SmartGear_Online.Services
     public class TopProduct
     {
         public int ProductId { get; set; }
-        public string ProductName { get; set; }
-        public string Category { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public int QuantitySold { get; set; }
         public decimal Revenue { get; set; }
         public decimal AveragePrice { get; set; }
@@ -127,17 +127,17 @@ namespace SmartGear_Online.Services
         public int LowStockCount { get; set; }
         public int OutOfStockCount { get; set; }
         public decimal TotalInventoryValue { get; set; }
-        public List<LowStockAlert> LowStockItems { get; set; }
+        public List<LowStockAlert> LowStockItems { get; set; } = new List<LowStockAlert>();
     }
 
     public class LowStockAlert
     {
         public int ProductId { get; set; }
-        public string ProductName { get; set; }
-        public string Category { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public int CurrentStock { get; set; }
         public int ReorderLevel { get; set; }
-        public int NeededQuantity { get; set; } // ReorderLevel - CurrentStock
+        public int NeededQuantity { get; set; }
         public DateTime LastRestockedDate { get; set; }
     }
 

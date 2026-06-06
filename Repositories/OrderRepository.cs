@@ -157,5 +157,27 @@ namespace SmartGear_Online.Repositories
                 return false;
             }
         }
+
+        public async Task<List<Order>> GetAllOrdersAsync()
+        {
+            try
+            {
+                _logger.LogInformation("OrderRepository.GetAllOrdersAsync() called");
+
+                var orders = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                    .OrderByDescending(o => o.OrderDate)
+                    .ToListAsync();
+
+                return orders;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all orders");
+                throw;
+            }
+        }
     }
 }

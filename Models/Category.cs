@@ -14,11 +14,11 @@ namespace SmartGear_Online.Models
         [StringLength(100, MinimumLength = 2,
             ErrorMessage = "Category name must be between 2 & 100 characters")]
         [Display(Name = "Category Name")]
-        public string CategoryName { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
 
         [StringLength(500)]
         [Display(Name = "Description")]
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         [Display(Name = "Created Date")]
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;

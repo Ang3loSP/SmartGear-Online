@@ -1,5 +1,4 @@
-﻿using SmartGear_Online.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SmartGear_Online.Models
@@ -30,15 +29,15 @@ namespace SmartGear_Online.Models
         public decimal UnitPrice { get; set; }
 
         // Navigation properties
-        public virtual Order Order { get; set; }
-        public virtual Product Product { get; set; }
+        public virtual Order? Order { get; set; }
+        public virtual Product? Product { get; set; }
 
         // ===================================================
         // BUSINESS LOGIC
         // ===================================================
 
         /// <summary>
-        /// Calculate line total (quantity × unit price)
+        /// Calculate line total (quantity x unit price)
         /// </summary>
         public decimal GetLineTotal()
         {

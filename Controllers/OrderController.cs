@@ -47,7 +47,7 @@ namespace SmartGear_Online.Controllers
                 _logger.LogInformation("Checkout page requested by user {UserId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("Cart");
+                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("ShoppingCart");
 
                 if (shoppingCart == null || !shoppingCart.HasItems())
                 {
@@ -91,7 +91,7 @@ namespace SmartGear_Online.Controllers
                 _logger.LogInformation("PlaceOrder POST called for user {UserId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("Cart");
+                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("ShoppingCart");
 
                 if (shoppingCart == null || !shoppingCart.HasItems())
                 {
@@ -162,7 +162,7 @@ namespace SmartGear_Online.Controllers
                     await _productRepository.ReduceInventoryAsync(item.ProductId, item.Quantity);
                 }
 
-                HttpContext.Session.Remove("Cart");
+                HttpContext.Session.Remove("ShoppingCart");
 
                 var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.Name);
                 _ = Task.Run(async () =>

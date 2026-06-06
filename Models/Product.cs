@@ -17,11 +17,11 @@ namespace SmartGear_Online.Models
         [StringLength(200, MinimumLength = 3,
             ErrorMessage = "Product name must be between 3 & 200 characters")]
         [Display(Name = "Product Name")]
-        public string ProductName { get; set; }
+        public string ProductName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Category is required")]
         [StringLength(50)]
-        public string Category { get; set; }
+        public string Category { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Price is required")]
         [Range(0.01, 10000,
@@ -33,12 +33,12 @@ namespace SmartGear_Online.Models
         [Required(ErrorMessage = "Description is required")]
         [StringLength(1000, MinimumLength = 10,
             ErrorMessage = "Description must be between 10 & 1000 characters")]
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         [Required]
         [Url(ErrorMessage = "Please enter a valid image URL")]
         [Display(Name = "Image URL")]
-        public string ImageUrl { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Quantity in stock is required")]
         [Range(0, 100000, ErrorMessage = "Quantity must be between 0 & 100,000")]

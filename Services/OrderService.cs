@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SmartGearOnline.Web.Services
+namespace SmartGear_Online.Services
 {
     /// <summary>
     /// QUESTION 2 & 5: Order Service Implementation

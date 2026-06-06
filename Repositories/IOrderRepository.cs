@@ -12,5 +12,6 @@ namespace SmartGear_Online.Repositories
         Task UpdateOrderAsync(Order order);
         Task<bool> AddOrderItemAsync(OrderItem item);
         Task<bool> UpdateOrderStatusAsync(int orderId, string newStatus);
+        Task<List<Order>> GetAllOrdersAsync();
     }
 }

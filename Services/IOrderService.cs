@@ -1,8 +1,9 @@
 ﻿using SmartGear_Online.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace SmartGearOnline.Web.Services
+namespace SmartGear_Online.Services
 {
     /// <summary>
     /// QUESTION 2 & 5: Order Service Interface
@@ -13,7 +14,7 @@ namespace SmartGearOnline.Web.Services
         /// <summary>
         /// Calculate order totals (subtotal, tax, shipping, grand total)
         /// </summary>
-        Task<OrderTotals> CalculateOrderTotalsAsync(List<CartItem> cartItems, string shippingMethod, string discountCode = null);
+        Task<OrderTotals> CalculateOrderTotalsAsync(List<CartItem> cartItems, string shippingMethod, string? discountCode = null);
 
         /// <summary>
         /// Validate order before submission
@@ -53,7 +54,7 @@ namespace SmartGearOnline.Web.Services
     {
         public decimal Subtotal { get; set; }
         public decimal TaxAmount { get; set; }
-        public decimal TaxRate { get; set; } = 0.08m; // 8% tax
+        public decimal TaxRate { get; set; } = 0.08m;
         public decimal ShippingCost { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal GrandTotal { get; set; }
@@ -77,8 +78,8 @@ namespace SmartGearOnline.Web.Services
     public class PaymentResult
     {
         public bool Success { get; set; }
-        public string TransactionId { get; set; }
-        public string Message { get; set; }
+        public string TransactionId { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
         public DateTime TransactionDate { get; set; }
     }
 
@@ -89,8 +90,8 @@ namespace SmartGearOnline.Web.Services
     {
         public bool IsValid { get; set; }
         public decimal DiscountAmount { get; set; }
-        public string DiscountType { get; set; } // "Percentage", "FixedAmount"
-        public string Message { get; set; }
+        public string DiscountType { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -100,11 +101,11 @@ namespace SmartGearOnline.Web.Services
     {
         public int HistoryId { get; set; }
         public int OrderId { get; set; }
-        public string Status { get; set; }
-        public string StatusDisplayName { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string StatusDisplayName { get; set; } = string.Empty;
         public DateTime ChangedAt { get; set; }
-        public string ChangedBy { get; set; }
-        public string Notes { get; set; }
+        public string ChangedBy { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -112,11 +113,11 @@ namespace SmartGearOnline.Web.Services
     /// </summary>
     public class PaymentInfo
     {
-        public string CardNumber { get; set; }
-        public string ExpiryMonth { get; set; }
-        public string ExpiryYear { get; set; }
-        public string Cvv { get; set; }
-        public string CardHolderName { get; set; }
+        public string CardNumber { get; set; } = string.Empty;
+        public string ExpiryMonth { get; set; } = string.Empty;
+        public string ExpiryYear { get; set; } = string.Empty;
+        public string Cvv { get; set; } = string.Empty;
+        public string CardHolderName { get; set; } = string.Empty;
         public string PaymentMethod { get; set; } = "CreditCard";
     }
 }

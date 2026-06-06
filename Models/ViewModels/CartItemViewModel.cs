@@ -10,13 +10,13 @@ namespace SmartGear_Online.Models.ViewModels
     {
         public int CartItemId { get; set; }
         public int ProductId { get; set; }
-        public string ProductName { get; set; }
+        public string ProductName { get; set; } = string.Empty;
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
-        public string ImageUrl { get; set; }
-        public string Color { get; set; }
-        public string CustomText { get; set; }
-        public string LogoImageUrl { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public string CustomText { get; set; } = string.Empty;
+        public string LogoImageUrl { get; set; } = string.Empty;
         public int? CustomizationId { get; set; }
 
         // Calculated property

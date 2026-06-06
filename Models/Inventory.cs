@@ -1,5 +1,4 @@
-﻿using SmartGear_Online.Models;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -31,7 +30,7 @@ namespace SmartGear_Online.Models
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation property
-        public virtual Product Product { get; set; }
+        public virtual Product? Product { get; set; }
 
         public bool NeedsReordering()
         {

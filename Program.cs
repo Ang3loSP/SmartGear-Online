@@ -12,8 +12,7 @@ using SmartGear_Online.Middleware;
 using SmartGear_Online.Models;
 using SmartGear_Online.Repositories;
 using SmartGear_Online.Services;
-using SmartGearOnline.Filters;
-using SmartGearOnline.Web.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,8 +101,8 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<ICartRepository, CartRepository>();        
-builder.Services.AddScoped<IOrderService, OrderService>();            
+builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<LoggingActionFilter>();
