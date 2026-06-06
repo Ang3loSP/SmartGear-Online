@@ -11,37 +11,46 @@
             <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Account</h4>
         </div>
         <div class="card-body p-4">
+
+            @* Shows Identity errors (duplicate email, password rules, etc.) *@
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @Html.ValidationSummary(false, "", new { @class = "mb-0" })
+                </div>
+            }
+
             <form asp-controller="Account" asp-action="Register" method="post">
                 @Html.AntiForgeryToken()
 
                 <div class="mb-3">
                     <label asp-for="FullName" class="form-label">Full Name *</label>
-                    <input asp-for="FullName" class="form-control" required>
+                    <input asp-for="FullName" class="form-control" placeholder="e.g. Angelo Puza">
                     <span asp-validation-for="FullName" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="Email" class="form-label">Email Address *</label>
-                    <input asp-for="Email" type="email" class="form-control" required>
+                    <input asp-for="Email" type="email" class="form-control" placeholder="you@example.com">
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="PhoneNumber" class="form-label">Phone Number *</label>
-                    <input asp-for="PhoneNumber" class="form-control" required>
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="e.g. 0831234567 or +27831234567">
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="Password" class="form-label">Password *</label>
-                    <input asp-for="Password" type="password" class="form-control" required>
-                    <small class="text-muted">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char</small>
+                    <input asp-for="Password" type="password" class="form-control">
+                    <small class="text-muted">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character</small>
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
                     <label asp-for="ConfirmPassword" class="form-label">Confirm Password *</label>
-                    <input asp-for="ConfirmPassword" type="password" class="form-control" required>
+                    <input asp-for="ConfirmPassword" type="password" class="form-control">
                     <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                 </div>
 
