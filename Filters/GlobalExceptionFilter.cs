@@ -18,7 +18,6 @@ namespace SmartGear_Online.Filters
 
         public void OnException(ExceptionContext context)
         {
-            // Log the exception with full details
             _logger.LogError(context.Exception,
                 "Unhandled exception occurred in {ActionName} at {Timestamp}. Exception: {ExceptionType} - {ExceptionMessage}",
                 context.ActionDescriptor.DisplayName,
@@ -26,10 +25,8 @@ namespace SmartGear_Online.Filters
                 context.Exception.GetType().Name,
                 context.Exception.Message);
 
-            // Log stack trace for debugging
             _logger.LogDebug("Stack trace: {StackTrace}", context.Exception.StackTrace);
 
-            // Handle specific exception types
             if (context.Exception is ArgumentException)
             {
                 context.Result = new BadRequestObjectResult(new
@@ -55,7 +52,6 @@ namespace SmartGear_Online.Filters
             }
             else
             {
-                // For unexpected errors, return a generic error response
                 context.Result = new ObjectResult(new
                 {
                     error = "An unexpected error occurred. Our team has been notified.",
