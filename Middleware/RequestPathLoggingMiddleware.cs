@@ -6,15 +6,14 @@ using System.Threading.Tasks;
 namespace SmartGear_Online.Middleware
 {
     /// Question 2: Custom Middleware
-    /// Purpose: Logs every incoming HTTP request path & method
-    /// This helps with debugging & tracking user activity
+    /// Purpose: Logs every incoming HTTP request path &amp; method
     public class RequestPathLoggingMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<RequestPathLoggingMiddleware> _logger;
 
         public RequestPathLoggingMiddleware(RequestDelegate next,
-                                          ILogger<RequestPathLoggingMiddleware> logger)
+                                            ILogger<RequestPathLoggingMiddleware> logger)
         {
             _next = next;
             _logger = logger;
@@ -22,13 +21,11 @@ namespace SmartGear_Online.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // BEFORE: Request arrives
             var startTime = DateTime.UtcNow;
             var path = context.Request.Path;
             var method = context.Request.Method;
             var queryString = context.Request.QueryString;
 
-            // Log the incoming request
             _logger.LogInformation(
                 "Request: {Method} {Path}{QueryString} at {Timestamp}",
                 method,
@@ -36,7 +33,6 @@ namespace SmartGear_Online.Middleware
                 queryString,
                 startTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-            // Also log user information if logged in
             if (context.User?.Identity?.IsAuthenticated == true)
             {
                 var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes
@@ -50,14 +46,11 @@ namespace SmartGear_Online.Middleware
                     email);
             }
 
-            // Call the next middleware in the pipeline
             await _next(context);
 
-            // AFTER: Response is ready
             var endTime = DateTime.UtcNow;
             var duration = (endTime - startTime).TotalMilliseconds;
 
-            // Log the response
             _logger.LogInformation(
                 "Response: {StatusCode} completed in {Duration}ms",
                 context.Response.StatusCode,
@@ -65,7 +58,6 @@ namespace SmartGear_Online.Middleware
         }
     }
 
-    // Extension method to simplify middleware registration in Program.cs
     public static class RequestPathLoggingExtensions
     {
         public static IApplicationBuilder UseRequestPathLogging(
