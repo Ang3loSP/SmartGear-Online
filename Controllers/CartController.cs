@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SmartGear_Online.Extensions;
 using SmartGear_Online.Models;
 using SmartGear_Online.Repositories;
+using SmartGear_Online.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,15 +13,18 @@ namespace SmartGear_Online.Controllers
     public class CartController : Controller
     {
         private readonly IProductRepository _productRepository;
+        private readonly IOrderService _orderService;
         private readonly ILogger<CartController> _logger;
 
         private const string CartSessionKey = "ShoppingCart";
 
         public CartController(
             IProductRepository productRepository,
+            IOrderService orderService,
             ILogger<CartController> logger)
         {
             _productRepository = productRepository;
+            _orderService = orderService;
             _logger = logger;
         }
 
@@ -42,19 +46,13 @@ namespace SmartGear_Online.Controllers
                 var product = await _productRepository.GetProductByIdAsync(productId);
 
                 if (product == null)
-                {
                     return Json(new { success = false, message = "Product not found" });
-                }
 
                 if (!product.IsInStock())
-                {
                     return Json(new { success = false, message = "Product is out of stock" });
-                }
 
                 if (quantity > product.QuantityInStock)
-                {
-                    return Json(new { success = false, message = $"Only {product.QuantityInStock} items available" });
-                }
+                    return Json(new { success = false, message = "Only " + product.QuantityInStock + " items available" });
 
                 var cart = GetCart();
 
@@ -72,7 +70,8 @@ namespace SmartGear_Online.Controllers
                 cart.AddItem(cartItem);
                 SaveCart(cart);
 
-                _logger.LogInformation("Product added to cart successfully. Cart now has {ItemCount} items", cart.ItemCount);
+                _logger.LogInformation(
+                    "Product added to cart. Cart now has {ItemCount} items", cart.ItemCount);
 
                 return Json(new { success = true, message = "Item added to cart", cartCount = cart.ItemCount });
             }
@@ -122,11 +121,43 @@ namespace SmartGear_Online.Controllers
         }
 
         // POST: /Cart/ApplyDiscount
+        // FIX: discount codes are now validated server-side via IOrderService,
+        // not against a hardcoded list in cart.js.
         [HttpPost]
-        public IActionResult ApplyDiscount(string discountCode)
+        public async Task<IActionResult> ApplyDiscount(string discountCode)
         {
-            // Logic for applying discount
-            return Json(new { success = true, message = "Discount applied" });
+            try
+            {
+                if (string.IsNullOrWhiteSpace(discountCode))
+                    return Json(new { success = false, message = "Please enter a discount code." });
+
+                var cart = GetCart();
+
+                if (!cart.HasItems())
+                    return Json(new { success = false, message = "Your cart is empty." });
+
+                var result = await _orderService.ApplyDiscountAsync(discountCode.Trim().ToUpper(), cart.Subtotal);
+
+                if (!result.IsValid)
+                    return Json(new { success = false, message = result.Message });
+
+                cart.DiscountCode = discountCode.Trim().ToUpper();
+                cart.DiscountAmount = result.DiscountAmount;
+                SaveCart(cart);
+
+                return Json(new
+                {
+                    success = true,
+                    message = result.Message,
+                    discountAmount = result.DiscountAmount,
+                    discountType = result.DiscountType
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error applying discount code");
+                return Json(new { success = false, message = "An error occurred applying the discount." });
+            }
         }
 
         // GET: /Cart/GetCartCount
@@ -137,7 +168,9 @@ namespace SmartGear_Online.Controllers
             return Json(cart.ItemCount);
         }
 
-        // Helper methods
+        // ------------------------------------------------
+        // Private helpers
+        // ------------------------------------------------
         private ShoppingCart GetCart()
         {
             var cart = HttpContext.Session.GetObjectFromJson<ShoppingCart>(CartSessionKey);

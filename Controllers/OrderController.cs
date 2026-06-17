@@ -13,9 +13,6 @@ using System.Threading.Tasks;
 
 namespace SmartGear_Online.Controllers
 {
-    // ================================================
-    // QUESTION 10.8: AUTHORIZATION - Require authentication for all actions
-    // ================================================
     [Authorize]
     public class OrderController : Controller
     {
@@ -37,7 +34,7 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // CHECKOUT ACTION
+        // CHECKOUT
         // ================================================
         [HttpGet]
         public IActionResult Checkout()
@@ -80,10 +77,10 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // PLACE ORDER ACTION - WITH CSRF PROTECTION
+        // PLACE ORDER
         // ================================================
         [HttpPost]
-        [ValidateAntiForgeryToken]  // QUESTION 10.8: CSRF PROTECTION
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> PlaceOrder(CheckoutViewModel model)
         {
             try
@@ -95,18 +92,12 @@ namespace SmartGear_Online.Controllers
 
                 if (shoppingCart == null || !shoppingCart.HasItems())
                 {
-                    _logger.LogWarning("User {UserId} attempted place order with empty cart",
-                        User.FindFirstValue(ClaimTypes.NameIdentifier));
-
                     TempData["Error"] = "Your cart is empty.";
                     return RedirectToAction("Index", "Cart");
                 }
 
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Invalid checkout model for user {UserId}",
-                        User.FindFirstValue(ClaimTypes.NameIdentifier));
-
                     model.CartItems = shoppingCart.Items;
                     model.Subtotal = shoppingCart.Subtotal;
                     model.Tax = shoppingCart.Subtotal * 0.08m;
@@ -122,15 +113,13 @@ namespace SmartGear_Online.Controllers
 
                     if (product == null)
                     {
-                        _logger.LogError("Product {ProductId} not found during order placement", item.ProductId);
-                        TempData["Error"] = $"Product '{item.ProductName}' no longer exists.";
+                        TempData["Error"] = "Product '" + item.ProductName + "' no longer exists.";
                         return RedirectToAction("Index", "Cart");
                     }
 
                     if (!product.CanFulfillOrder(item.Quantity))
                     {
-                        _logger.LogWarning("Insufficient stock for product {ProductName}", product.ProductName);
-                        TempData["Error"] = $"Insufficient stock for '{product.ProductName}'.";
+                        TempData["Error"] = "Insufficient stock for '" + product.ProductName + "'.";
                         return RedirectToAction("Index", "Cart");
                     }
                 }
@@ -164,12 +153,15 @@ namespace SmartGear_Online.Controllers
 
                 HttpContext.Session.Remove("ShoppingCart");
 
-                var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.Name);
+                // Use the customer's own email from their claim
+                var customerEmail = User.FindFirstValue(ClaimTypes.Email)
+                                    ?? User.FindFirstValue(ClaimTypes.Name);
+
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _notificationService.SendOrderConfirmationEmailAsync(orderId, userEmail);
+                        await _notificationService.SendOrderConfirmationEmailAsync(orderId, customerEmail);
                     }
                     catch (Exception emailEx)
                     {
@@ -180,7 +172,7 @@ namespace SmartGear_Online.Controllers
                 _logger.LogInformation("Order {OrderId} placed successfully by user {UserId}",
                     orderId, User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                TempData["Success"] = $"Order #{orderId} placed successfully!";
+                TempData["Success"] = "Order #" + orderId + " placed successfully!";
                 return RedirectToAction("Confirmation", new { id = orderId });
             }
             catch (Exception ex)
@@ -194,32 +186,21 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // ORDER CONFIRMATION - WITH OWNERSHIP CHECK
+        // ORDER CONFIRMATION
         // ================================================
         [HttpGet]
         public async Task<IActionResult> Confirmation(int id)
         {
             try
             {
-                _logger.LogInformation("Order confirmation requested for order {OrderId} by user {UserId}",
-                    id, User.FindFirstValue(ClaimTypes.NameIdentifier));
-
                 var order = await _orderRepository.GetOrderByIdAsync(id);
 
                 if (order == null)
-                {
-                    _logger.LogWarning("Order {OrderId} not found for confirmation", id);
                     return NotFound("Order not found");
-                }
 
-                // QUESTION 10.8: SECURITY CHECK - Ensure user owns this order
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (order.CustomerId != userId && !User.IsInRole("Admin"))
-                {
-                    _logger.LogWarning("User {UserId} attempted to view order {OrderId} without permission",
-                        userId, id);
                     return Unauthorized("You don't have permission to view this order");
-                }
 
                 return View(order);
             }
@@ -232,7 +213,7 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // ORDER HISTORY - USER SPECIFIC
+        // ORDER HISTORY
         // ================================================
         [HttpGet]
         public async Task<IActionResult> History()
@@ -240,9 +221,6 @@ namespace SmartGear_Online.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                _logger.LogInformation("Order history requested by user {UserId}", userId);
-
-                // QUESTION 10.8: SECURITY - Only returns orders for the logged-in user
                 var orders = await _orderRepository.GetCustomerOrdersAsync(userId);
                 return View(orders);
             }
@@ -250,35 +228,26 @@ namespace SmartGear_Online.Controllers
             {
                 _logger.LogError(ex, "Error loading order history");
                 TempData["Error"] = "Unable to load order history.";
-                return View(new List<Order>());
+                return View(new System.Collections.Generic.List<Order>());
             }
         }
 
         // ================================================
-        // ORDER TRACKING - WITH OWNERSHIP CHECK
+        // ORDER TRACKING
         // ================================================
         [HttpGet]
         public async Task<IActionResult> Track(int id)
         {
             try
             {
-                _logger.LogInformation("Order tracking requested for order {OrderId}", id);
-
                 var order = await _orderRepository.GetOrderByIdAsync(id);
 
                 if (order == null)
-                {
                     return NotFound("Order not found");
-                }
 
-                // QUESTION 10.8: SECURITY CHECK - Ensure user owns this order
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (order.CustomerId != userId && !User.IsInRole("Admin"))
-                {
-                    _logger.LogWarning("User {UserId} attempted to track order {OrderId} without permission",
-                        userId, id);
                     return Unauthorized();
-                }
 
                 var estimatedDelivery = order.OrderDate.AddDays(
                     order.ShippingMethod == "Express" ? 3 : 7);
@@ -297,48 +266,50 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // QUESTION 10.8: ADMIN ONLY - UPDATE ORDER STATUS
+        // UPDATE ORDER STATUS (Admin only)
+        // FIX: email now goes to the customer, not the admin
         // ================================================
         [HttpPost]
-        [Authorize(Roles = "Admin")]  // Only Admin can update order status
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int orderId, string status)
         {
             try
             {
-                _logger.LogInformation("Admin user {UserId} updating order {OrderId} status to {Status}",
+                _logger.LogInformation("Admin {UserId} updating order {OrderId} to {Status}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier), orderId, status);
 
                 var order = await _orderRepository.GetOrderByIdAsync(orderId);
                 if (order == null)
-                {
                     return Json(new { success = false, message = "Order not found" });
-                }
 
                 var validStatuses = new[] { "Pending", "Confirmed", "In Production", "Shipped", "Delivered", "Cancelled" };
                 if (!validStatuses.Contains(status))
-                {
                     return Json(new { success = false, message = "Invalid status value" });
-                }
 
                 await _orderRepository.UpdateOrderStatusAsync(orderId, status);
 
-                // Send email notification to customer about status change
-                var userEmail = User.FindFirstValue(ClaimTypes.Email);
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _notificationService.SendOrderStatusUpdateAsync(orderId, status, userEmail);
-                    }
-                    catch (Exception emailEx)
-                    {
-                        _logger.LogError(emailEx, "Failed to send status update email for order {OrderId}", orderId);
-                    }
-                });
+                // FIX: retrieve the customer's email from the order's navigation property,
+                // not from the currently logged-in admin's claims.
+                var customerEmail = order.Customer?.Email ?? string.Empty;
 
-                _logger.LogInformation("Order {OrderId} status updated to {Status}", orderId, status);
-                return Json(new { success = true, message = $"Order status updated to {status}" });
+                if (!string.IsNullOrEmpty(customerEmail))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _notificationService.SendOrderStatusUpdateAsync(orderId, status, customerEmail);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogError(emailEx,
+                                "Failed to send status update email for order {OrderId}", orderId);
+                        }
+                    });
+                }
+
+                return Json(new { success = true, message = "Order status updated to " + status });
             }
             catch (Exception ex)
             {
@@ -348,7 +319,7 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // QUESTION 10.8: ADMIN ONLY - CANCEL ORDER
+        // CANCEL ORDER (Admin only)
         // ================================================
         [HttpPost]
         [Authorize(Roles = "Admin")]
@@ -357,26 +328,17 @@ namespace SmartGear_Online.Controllers
         {
             try
             {
-                _logger.LogInformation("Admin user {UserId} cancelling order {OrderId}",
-                    User.FindFirstValue(ClaimTypes.NameIdentifier), orderId);
-
                 var order = await _orderRepository.GetOrderByIdAsync(orderId);
                 if (order == null)
-                {
                     return Json(new { success = false, message = "Order not found" });
-                }
 
                 if (!order.CanBeCancelled())
-                {
                     return Json(new { success = false, message = "Order cannot be cancelled at this stage" });
-                }
 
                 await _orderRepository.UpdateOrderStatusAsync(orderId, "Cancelled");
 
-                // Restore inventory items
                 foreach (var item in order.OrderItems)
                 {
-                    // Add back the quantities to inventory
                     var product = await _productRepository.GetProductByIdAsync(item.ProductId);
                     if (product != null)
                     {
@@ -385,7 +347,6 @@ namespace SmartGear_Online.Controllers
                     }
                 }
 
-                _logger.LogInformation("Order {OrderId} cancelled successfully", orderId);
                 return Json(new { success = true, message = "Order cancelled successfully" });
             }
             catch (Exception ex)

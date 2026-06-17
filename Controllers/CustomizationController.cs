@@ -1,39 +1,40 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SmartGear_Online.Extensions;
 using SmartGear_Online.Models;
 using SmartGear_Online.Repositories;
-using SmartGear_Online.Services;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace SmartGear_Online.Controllers
 {
     /// <summary>
-    /// Customization Controller - Handles product customization
-    /// Question 3 & 8: Customization engine with real-time preview
+    /// Customization Controller — handles product customization.
+    /// FIX: customized items now save to the session cart (same store
+    /// used by CartController) instead of the empty CartRepository.
     /// </summary>
     [Authorize]
     public class CustomizationController : Controller
     {
         private readonly IProductRepository _productRepository;
-        private readonly ICartRepository _cartRepository;
         private readonly ILogger<CustomizationController> _logger;
+
+        // Session key must match CartController exactly
+        private const string CartSessionKey = "ShoppingCart";
 
         public CustomizationController(
             IProductRepository productRepository,
-            ICartRepository cartRepository,
             ILogger<CustomizationController> logger)
         {
             _productRepository = productRepository;
-            _cartRepository = cartRepository;
             _logger = logger;
         }
 
-        /// <summary>
-        /// GET: /Customization/Create/{productId}
-        /// Displays customization page for a specific product
-        /// </summary>
+        // ================================================
+        // GET: /Customization/Create/{productId}
+        // ================================================
         [HttpGet]
         [ResponseCache(NoStore = true, Duration = 0)]
         public async Task<IActionResult> Create(int productId)
@@ -67,17 +68,23 @@ namespace SmartGear_Online.Controllers
             }
         }
 
-        /// <summary>
-        /// POST: /Customization/Create
-        /// Saves customization and adds to cart
-        /// </summary>
+        // ================================================
+        // POST: /Customization/Create
+        // FIX: saves directly into the session cart
+        // ================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(int productId, string color, string customText, int quantity, IFormFile? logoFile)
+        public async Task<IActionResult> Create(
+            int productId,
+            string color,
+            string customText,
+            int quantity,
+            IFormFile? logoFile)
         {
             try
             {
-                _logger.LogInformation("Saving customization for product {ProductId}, Color: {Color}, Quantity: {Quantity}",
+                _logger.LogInformation(
+                    "Saving customization for product {ProductId}, Color: {Color}, Quantity: {Quantity}",
                     productId, color, quantity);
 
                 var product = await _productRepository.GetProductByIdAsync(productId);
@@ -88,48 +95,47 @@ namespace SmartGear_Online.Controllers
                     return RedirectToAction("Index", "Product");
                 }
 
-                if (quantity > product.QuantityInStock)
+                if (quantity < 1 || quantity > product.QuantityInStock)
                 {
-                    TempData["Error"] = $"Only {product.QuantityInStock} units available.";
+                    TempData["Error"] = "Only " + product.QuantityInStock + " units available.";
                     return RedirectToAction("Create", new { productId });
                 }
 
-                // Handle logo upload if provided
+                // Handle optional logo upload
                 string logoUrl = string.Empty;
                 if (logoFile != null && logoFile.Length > 0)
                 {
                     logoUrl = await UploadLogoAsync(logoFile);
                 }
 
-                // Create customization record
-                var customization = new Customization
-                {
-                    ProductId = productId,
-                    Color = color ?? "Blue",
-                    CustomText = customText ?? string.Empty,
-                    LogoImageUrl = logoUrl,
-                    CreatedDate = DateTime.UtcNow
-                };
-
-                // Add to cart
+                // Build cart item
                 var cartItem = new CartItem
                 {
+                    CartItemId = Math.Abs(Guid.NewGuid().GetHashCode()),
                     ProductId = productId,
                     ProductName = product.ProductName,
                     Price = product.Price,
                     Quantity = quantity,
                     ImageUrl = product.ImageUrl,
-                    Color = customization.Color,
-                    CustomText = customization.CustomText,
-                    LogoImageUrl = customization.LogoImageUrl,
+                    Color = color ?? "Blue",
+                    CustomText = customText ?? string.Empty,
+                    LogoImageUrl = logoUrl,
                     AddedDate = DateTime.UtcNow
                 };
 
-                await _cartRepository.AddToCartAsync(cartItem, User.Identity?.Name ?? "Anonymous");
+                // Read, update, and save the session cart
+                var cart = HttpContext.Session.GetObjectFromJson<ShoppingCart>(CartSessionKey)
+                           ?? new ShoppingCart();
 
-                _logger.LogInformation("Customization saved and added to cart for product {ProductId}", productId);
+                cart.AddItem(cartItem);
 
-                TempData["Success"] = $"'{product.ProductName}' has been added to your cart!";
+                HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
+
+                _logger.LogInformation(
+                    "Customization added to session cart for product {ProductId}. Cart now has {Count} items.",
+                    productId, cart.ItemCount);
+
+                TempData["Success"] = "'" + product.ProductName + "' has been added to your cart!";
                 return RedirectToAction("Index", "Cart");
             }
             catch (Exception ex)
@@ -140,10 +146,9 @@ namespace SmartGear_Online.Controllers
             }
         }
 
-        /// <summary>
-        /// GET: /Customization/Preview
-        /// AJAX endpoint for real-time preview updates
-        /// </summary>
+        // ================================================
+        // GET: /Customization/Preview
+        // ================================================
         [HttpGet]
         public IActionResult Preview(int productId, string color, string customText)
         {
@@ -164,36 +169,36 @@ namespace SmartGear_Online.Controllers
             }
         }
 
-        /// <summary>
-        /// GET: /Customization/GetColors
-        /// Returns available colors for a product
-        /// </summary>
+        // ================================================
+        // GET: /Customization/GetColors
+        // ================================================
         [HttpGet]
         public IActionResult GetColors(int productId)
         {
             var colors = new[]
             {
-                new { Name = "Red", Hex = "#FF0000" },
-                new { Name = "Blue", Hex = "#0000FF" },
-                new { Name = "Green", Hex = "#00FF00" },
+                new { Name = "Red",    Hex = "#FF0000" },
+                new { Name = "Blue",   Hex = "#0000FF" },
+                new { Name = "Green",  Hex = "#00FF00" },
                 new { Name = "Yellow", Hex = "#FFFF00" },
-                new { Name = "White", Hex = "#FFFFFF" },
-                new { Name = "Black", Hex = "#000000" }
+                new { Name = "White",  Hex = "#FFFFFF" },
+                new { Name = "Black",  Hex = "#000000" }
             };
             return Json(colors);
         }
 
+        // ================================================
+        // Private helper
+        // ================================================
         private async Task<string> UploadLogoAsync(IFormFile logoFile)
         {
-            // In production, upload to Azure Blob Storage or local storage
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads/logos");
+            var uploadsFolder = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot/uploads/logos");
 
             if (!Directory.Exists(uploadsFolder))
-            {
                 Directory.CreateDirectory(uploadsFolder);
-            }
 
-            var uniqueFileName = $"{Guid.NewGuid()}_{logoFile.FileName}";
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + logoFile.FileName;
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             using (var fileStream = new FileStream(filePath, FileMode.Create))
@@ -201,7 +206,7 @@ namespace SmartGear_Online.Controllers
                 await logoFile.CopyToAsync(fileStream);
             }
 
-            return $"/uploads/logos/{uniqueFileName}";
+            return "/uploads/logos/" + uniqueFileName;
         }
     }
 }
