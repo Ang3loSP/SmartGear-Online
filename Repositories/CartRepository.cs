@@ -22,14 +22,11 @@ namespace SmartGear_Online.Repositories
 
         public async Task<List<CartItem>> GetCartItemsAsync(string userId)
         {
-            // For session-based cart, this would be different
-            // For now, return empty list - implement based on your cart storage strategy
             return await Task.FromResult(new List<CartItem>());
         }
 
         public async Task AddToCartAsync(CartItem item, string userId)
         {
-            // Implementation depends on your cart storage (Session or Database)
             await Task.CompletedTask;
         }
 
