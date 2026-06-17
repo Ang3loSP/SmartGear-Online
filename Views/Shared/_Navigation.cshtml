@@ -49,7 +49,10 @@
                 <li class="nav-item">
                     <a class="nav-link position-relative" asp-controller="Cart" asp-action="Index">
                         <i class="fas fa-shopping-cart fa-lg"></i>
-                        <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+                        <%-- ID matches cartCountBadge used in site.js --%>
+                        <span id="cartCountBadge"
+                              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                              style="display:none;">0</span>
                     </a>
                 </li>
 
@@ -80,20 +83,3 @@
         </div>
     </div>
 </nav>
-
-<script>
-    function updateCartCount() {
-        fetch('/Cart/GetCartCount')
-            .then(response => response.json())
-            .then(count => {
-                const badge = document.getElementById('cartCount');
-                if (count > 0) {
-                    badge.textContent = count;
-                    badge.style.display = 'inline';
-                } else {
-                    badge.style.display = 'none';
-                }
-            });
-    }
-    document.addEventListener('DOMContentLoaded', updateCartCount);
-</script>

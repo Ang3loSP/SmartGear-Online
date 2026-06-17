@@ -8,16 +8,19 @@ namespace SmartGear_Online.Data
 {
     /// Question 6: DbContext for Entity Framework Core
     /// QUESTION 10: DB CONTEXT WITH IDENTITY
-    /// Manages database connection & entities
-    /// Maps C# classes to database tables
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
+        // Static seed date — must never be DateTime.UtcNow.
+        // EF compares seed values on every migration run; a dynamic date
+        // always looks like a change &amp; causes duplicate-key errors.
+        private static readonly DateTime SeedDate =
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
 
-        // Define DbSets (tables)
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Order> Orders { get; set; }
@@ -29,7 +32,6 @@ namespace SmartGear_Online.Data
         {
             base.OnModelCreating(builder);
 
-            // Configure relationships
             builder.Entity<Order>()
                 .HasOne(o => o.Customer)
                 .WithMany()
@@ -60,7 +62,6 @@ namespace SmartGear_Online.Data
                 .HasForeignKey(i => i.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure decimal precision to fix warnings
             builder.Entity<Order>()
                 .Property(o => o.TotalPrice)
                 .HasPrecision(18, 2);
@@ -73,7 +74,6 @@ namespace SmartGear_Online.Data
                 .Property(p => p.Price)
                 .HasPrecision(18, 2);
 
-            // Create indexes for performance
             builder.Entity<Product>()
                 .HasIndex(p => p.ProductName)
                 .IsUnique();
@@ -90,48 +90,42 @@ namespace SmartGear_Online.Data
             builder.Entity<Order>()
                 .HasIndex(o => o.OrderDate);
 
-            // REMOVED: Custom Identity table name mappings
-            // Using default table names (AspNetRoles, AspNetUsers, etc.) for compatibility
-
-            // Seed initial data
             SeedData(builder);
         }
 
         private void SeedData(ModelBuilder builder)
         {
-            // Seed categories
             builder.Entity<Category>().HasData(
                 new Category
                 {
                     CategoryId = 1,
                     CategoryName = "Jerseys",
-                    Description = "Team jerseys & uniforms",
-                    CreatedDate = DateTime.UtcNow
+                    Description = "Team jerseys &amp; uniforms",
+                    CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 2,
                     CategoryName = "Shoes",
-                    Description = "Athletic & sports shoes",
-                    CreatedDate = DateTime.UtcNow
+                    Description = "Athletic &amp; sports shoes",
+                    CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 3,
                     CategoryName = "Gear",
-                    Description = "Sports equipment & accessories",
-                    CreatedDate = DateTime.UtcNow
+                    Description = "Sports equipment &amp; accessories",
+                    CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 4,
                     CategoryName = "Hats",
-                    Description = "Caps, beanies & hats",
-                    CreatedDate = DateTime.UtcNow
+                    Description = "Caps, beanies &amp; hats",
+                    CreatedDate = SeedDate
                 }
             );
 
-            // Seed sample products
             builder.Entity<Product>().HasData(
                 new Product
                 {
@@ -139,12 +133,12 @@ namespace SmartGear_Online.Data
                     ProductName = "Nike Custom Jersey 2024",
                     Category = "Jerseys",
                     Price = 89.99m,
-                    Description = "High-quality custom team jersey with name & number",
-                    ImageUrl = "/images/jersey1.jpg",
+                    Description = "High-quality custom team jersey with name &amp; number",
+                    ImageUrl = "/images/products/jersey1.jpg",
                     QuantityInStock = 50,
                     ReorderLevel = 10,
-                    CreatedDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow,
+                    CreatedDate = SeedDate,
+                    UpdatedDate = SeedDate,
                     IsActive = true
                 },
                 new Product
@@ -154,11 +148,11 @@ namespace SmartGear_Online.Data
                     Category = "Shoes",
                     Price = 129.99m,
                     Description = "Professional soccer shoes with customizable colors",
-                    ImageUrl = "/images/shoe1.jpg",
+                    ImageUrl = "/images/products/shoe1.jpg",
                     QuantityInStock = 35,
                     ReorderLevel = 10,
-                    CreatedDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow,
+                    CreatedDate = SeedDate,
+                    UpdatedDate = SeedDate,
                     IsActive = true
                 }
             );
