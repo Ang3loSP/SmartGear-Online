@@ -6,7 +6,6 @@
 function updateCartTotals() {
     let subtotal = 0;
 
-    // Calculate subtotal from all cart items
     document.querySelectorAll('.cart-item').forEach(item => {
         const price = parseFloat(item.dataset.price);
         const quantity = parseInt(item.querySelector('.qty-input').value);
@@ -16,10 +15,8 @@ function updateCartTotals() {
         subtotal += lineTotal;
     });
 
-    // Calculate tax (8%)
     const tax = subtotal * 0.08;
 
-    // Get discount if applied
     let discount = 0;
     const discountRow = document.getElementById('discountRow');
     if (discountRow && discountRow.style.display !== 'none') {
@@ -27,7 +24,6 @@ function updateCartTotals() {
         discount = parseFloat(discountText.replace('$', '').replace('-', '')) || 0;
     }
 
-    // Calculate shipping (free over $50)
     let shipping = 0;
     const shippingElement = document.getElementById('shipping');
     if (subtotal < 50 && subtotal > 0) {
@@ -39,10 +35,8 @@ function updateCartTotals() {
         shippingElement.classList.add('text-success');
     }
 
-    // Calculate total
     const total = subtotal + tax + shipping - discount;
 
-    // Update display
     document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
     document.getElementById('tax').textContent = '$' + tax.toFixed(2);
     document.getElementById('total').textContent = total.toFixed(2);
@@ -77,7 +71,7 @@ function removeItem(itemId) {
         return;
     }
 
-    const itemRow = document.querySelector(`.cart-item[data-item-id="${itemId}"]`);
+    const itemRow = document.querySelector('.cart-item[data-item-id="' + itemId + '"]');
     if (itemRow) {
         itemRow.classList.add('cart-item-removing');
     }
@@ -93,25 +87,19 @@ function removeItem(itemId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
+                setTimeout(() => { location.reload(); }, 300);
             } else {
                 alert('Failed to remove item');
-                if (itemRow) {
-                    itemRow.classList.remove('cart-item-removing');
-                }
+                if (itemRow) itemRow.classList.remove('cart-item-removing');
             }
         })
         .catch(error => {
             console.error('Error removing item:', error);
-            if (itemRow) {
-                itemRow.classList.remove('cart-item-removing');
-            }
+            if (itemRow) itemRow.classList.remove('cart-item-removing');
         });
 }
 
-// Apply discount code
+// Apply discount code — validated server-side, no codes in JS
 function applyDiscount() {
     const code = document.getElementById('discountCode').value.trim();
 
@@ -120,43 +108,53 @@ function applyDiscount() {
         return;
     }
 
-    const subtotalText = document.getElementById('subtotal').textContent;
-    const subtotal = parseFloat(subtotalText.replace('$', ''));
+    const btn = document.getElementById('applyDiscountBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Checking...';
 
-    // Discount codes (in real app, this would be server-side validation)
-    const validCodes = {
-        'SAVE10': 0.10,
-        'SAVE20': 0.20,
-        'FIRST25': 0.25,
-        'FREESHIP': 'shipping'
-    };
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
 
-    if (validCodes[code]) {
-        if (validCodes[code] === 'shipping') {
-            document.getElementById('shipping').innerHTML = 'FREE';
-            document.getElementById('shipping').classList.add('text-success');
-            alert('Free shipping applied!');
-        } else {
-            const discountAmount = subtotal * validCodes[code];
-            document.getElementById('discountAmount').textContent = '-$' + discountAmount.toFixed(2);
-            document.getElementById('discountRow').style.display = 'flex';
-            alert('Discount applied successfully!');
-        }
-        updateCartTotals();
+    fetch('/Cart/ApplyDiscount', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': token
+        },
+        body: 'discountCode=' + encodeURIComponent(code)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.discountType === 'FreeShipping') {
+                    const shippingEl = document.getElementById('shipping');
+                    shippingEl.innerHTML = 'FREE';
+                    shippingEl.classList.add('text-success');
+                } else {
+                    document.getElementById('discountAmount').textContent =
+                        '-$' + parseFloat(data.discountAmount).toFixed(2);
+                    document.getElementById('discountRow').style.display = 'flex';
+                }
 
-        const btn = document.getElementById('applyDiscountBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-check me-1"></i> Applied';
-    } else {
-        alert('Invalid discount code');
-    }
+                updateCartTotals();
+
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> Applied';
+            } else {
+                alert(data.message || 'Invalid discount code');
+                btn.disabled = false;
+                btn.innerHTML = 'Apply';
+            }
+        })
+        .catch(error => {
+            console.error('Error applying discount:', error);
+            btn.disabled = false;
+            btn.innerHTML = 'Apply';
+        });
 }
 
-// Initialize all event listeners
+// Initialise all event listeners
 function initCartPage() {
     updateCartTotals();
 
-    // Quantity increase buttons
     document.querySelectorAll('.qty-increase').forEach(btn => {
         btn.addEventListener('click', function () {
             const input = this.closest('.quantity-control').querySelector('.qty-input');
@@ -165,13 +163,11 @@ function initCartPage() {
             if (currentValue < maxValue) {
                 const newValue = currentValue + 1;
                 input.value = newValue;
-                const itemId = input.dataset.itemId;
-                updateQuantity(itemId, newValue);
+                updateQuantity(input.dataset.itemId, newValue);
             }
         });
     });
 
-    // Quantity decrease buttons
     document.querySelectorAll('.qty-decrease').forEach(btn => {
         btn.addEventListener('click', function () {
             const input = this.closest('.quantity-control').querySelector('.qty-input');
@@ -179,13 +175,11 @@ function initCartPage() {
             if (currentValue > 1) {
                 const newValue = currentValue - 1;
                 input.value = newValue;
-                const itemId = input.dataset.itemId;
-                updateQuantity(itemId, newValue);
+                updateQuantity(input.dataset.itemId, newValue);
             }
         });
     });
 
-    // Manual quantity input change
     document.querySelectorAll('.qty-input').forEach(input => {
         input.addEventListener('change', function () {
             let value = parseInt(this.value);
@@ -200,25 +194,20 @@ function initCartPage() {
                 this.value = maxValue;
             }
 
-            const itemId = this.dataset.itemId;
-            updateQuantity(itemId, value);
+            updateQuantity(this.dataset.itemId, value);
         });
     });
 
-    // Remove item buttons
     document.querySelectorAll('.remove-item-btn').forEach(btn => {
         btn.addEventListener('click', function () {
-            const itemId = this.dataset.itemId;
-            removeItem(itemId);
+            removeItem(this.dataset.itemId);
         });
     });
 
-    // Apply discount button
     const applyBtn = document.getElementById('applyDiscountBtn');
     if (applyBtn) {
         applyBtn.addEventListener('click', applyDiscount);
     }
 }
 
-// Run initialization when DOM is ready
 document.addEventListener('DOMContentLoaded', initCartPage);
