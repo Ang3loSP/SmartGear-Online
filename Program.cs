@@ -17,22 +17,19 @@ using SmartGear_Online.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================================
-// QUESTION 2: SERVICE CONFIGURATION (Dependency Injection Setup)
+// QUESTION 2: SERVICE CONFIGURATION
 // ============================================================================
 
-// Configure Entity Framework Core
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("SmartGearConnection")));
 
 // ============================================================================
-// QUESTION 10.4: ASP.NET CORE IDENTITY WITH ENHANCED SECURITY
+// QUESTION 10.4: IDENTITY
 // ============================================================================
 
-// Configure ASP.NET Core Identity with strict security settings
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Password settings - STRONG password requirements
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = true;
@@ -40,16 +37,14 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireLowercase = true;
     options.Password.RequiredUniqueChars = 1;
 
-    // Lockout settings - prevents brute force attacks
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
-    // User settings
     options.User.RequireUniqueEmail = true;
-    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+    options.User.AllowedUserNameCharacters =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
 
-    // Sign-in settings
     options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedPhoneNumber = false;
 })
@@ -57,13 +52,13 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 // ============================================================================
-// ORDER SETTINGS CONFIGURATION (NEW - REQUIRED)
+// ORDER SETTINGS
 // ============================================================================
 
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
 
 // ============================================================================
-// QUESTION 10.4: COOKIE AUTHENTICATION CONFIGURATION
+// QUESTION 10.4: COOKIE AUTHENTICATION
 // ============================================================================
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -96,7 +91,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // ============================================================================
-// DEPENDENCY INJECTION (UPDATED - Added missing services)
+// DEPENDENCY INJECTION
 // ============================================================================
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -109,7 +104,7 @@ builder.Services.AddScoped<LoggingActionFilter>();
 builder.Services.AddScoped<GlobalExceptionFilter>();
 
 // ============================================================================
-// QUESTION 11.1: PERFORMANCE & REAL-TIME FEATURES
+// PERFORMANCE &amp; REAL-TIME
 // ============================================================================
 
 builder.Services.AddMemoryCache();
@@ -122,7 +117,7 @@ builder.Services.AddSignalR(options =>
 builder.Services.AddResponseCaching();
 
 // ============================================================================
-// MVC & RAZOR PAGES SERVICES
+// MVC &amp; RAZOR PAGES
 // ============================================================================
 
 builder.Services.AddControllersWithViews(options =>
@@ -143,7 +138,7 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddRazorPages();
 
 // ============================================================================
-// SESSION CONFIGURATION
+// SESSION
 // ============================================================================
 
 builder.Services.AddSession(options =>
@@ -157,7 +152,7 @@ builder.Services.AddSession(options =>
 });
 
 // ============================================================================
-// LOGGING CONFIGURATION
+// LOGGING
 // ============================================================================
 
 builder.Services.AddLogging(config =>
@@ -168,7 +163,6 @@ builder.Services.AddLogging(config =>
     config.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 });
 
-// Build application
 var app = builder.Build();
 
 // ============================================================================
@@ -178,7 +172,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await SeedRolesAndAdminAsync(services);
+    await SeedRolesAndAdminAsync(services, app.Configuration);
 }
 
 // ============================================================================
@@ -198,6 +192,7 @@ app.UseSession();
 app.UseResponseCaching();
 app.UseAuthentication();
 app.UseAuthorization();
+// FIX: class name corrected after renaming RequestPathLoggingMidddleware to RequestPathLoggingMiddleware
 app.UseRequestPathLogging();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -219,10 +214,14 @@ app.MapHub<ChatHub>("/chathub");
 app.Run();
 
 // ============================================================================
-// QUESTION 10.4: SEED ROLES AND ADMIN USER METHOD
+// SEED ADMIN — password read from config, never hardcoded in source
+// HOW TO SET THE SECRET (run once in the project folder):
+//   dotnet user-secrets init
+//   dotnet user-secrets set "SeedAdmin:Password" "YourStrongPassword123!"
 // ============================================================================
 
-async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
+async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider,
+                                   IConfiguration configuration)
 {
     var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -234,7 +233,7 @@ async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
         if (!await roleManager.RoleExistsAsync(role))
         {
             await roleManager.CreateAsync(new IdentityRole(role));
-            Console.WriteLine($"Role '{role}' created successfully.");
+            Console.WriteLine("Role '" + role + "' created successfully.");
         }
     }
 
@@ -243,6 +242,17 @@ async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
 
     if (adminUser == null)
     {
+        // FIX: password is now read from user-secrets / environment config,
+        // not hardcoded in source code.
+        var adminPassword = configuration["SeedAdmin:Password"];
+
+        if (string.IsNullOrEmpty(adminPassword))
+        {
+            Console.WriteLine("WARNING: SeedAdmin:Password is not configured.");
+            Console.WriteLine("Run: dotnet user-secrets set \"SeedAdmin:Password\" \"YourPassword!\"");
+            return;
+        }
+
         adminUser = new ApplicationUser
         {
             UserName = adminEmail,
@@ -253,20 +263,18 @@ async Task SeedRolesAndAdminAsync(IServiceProvider serviceProvider)
             IsActive = true
         };
 
-        var result = await userManager.CreateAsync(adminUser, "Admin@123456");
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
 
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Admin");
             Console.WriteLine("Admin user created successfully.");
-            Console.WriteLine("Email: admin@smartgear.com");
-            Console.WriteLine("Password: Admin@123456");
         }
         else
         {
             foreach (var error in result.Errors)
             {
-                Console.WriteLine($"Error creating admin: {error.Description}");
+                Console.WriteLine("Error creating admin: " + error.Description);
             }
         }
     }
