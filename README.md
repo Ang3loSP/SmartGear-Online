@@ -41,7 +41,7 @@ The platform supports product browsing, session-based cart management, order pro
 - **Real-Time Chat** — SignalR-powered live chat hub
 - **Security** — CSRF protection, security headers middleware, account lockout & cookie hardening
 - **Reporting** — sales reports, revenue breakdowns & inventory status
-- **Unit Tests** — business logic tested with xUnit & Moq
+- **Testing (in progress)** — `xUnit` & `Moq` referenced, test project not yet added
 
 ---
 
@@ -59,14 +59,16 @@ The platform supports product browsing, session-based cart management, order pro
 
 ## 🔐 Default Admin Account
 
-On first run the application automatically seeds a default admin user:
+On first run, the application seeds a default admin account using a password
+read from .NET user-secrets — **the password is never stored in source control**.
 
 | Field | Value |
 |---|---|
 | Email | `admin@smartgear.com` |
-| Password | `Admin@123456` |
+| Password | *Set via `dotnet user-secrets`, see Setup step 3 below* |
 
-> Change this password immediately after first login in a production environment.
+> If `SeedAdmin:Password` is not configured, the app will skip admin seeding
+> and print a warning with the exact command to run.
 
 ---
 
@@ -95,12 +97,21 @@ On first run the application automatically seeds a default admin user:
    }
    ```
 
-3. **Apply migrations**
+3. **Set the admin seed password (required)**
+
+   The default admin account password is never stored in source control.
+   Set it locally with .NET user-secrets:
+   ```bash
+   dotnet user-secrets init
+   dotnet user-secrets set "SeedAdmin:Password" "YourStrongPassword123!"
+   ```
+
+4. **Apply migrations**
    ```bash
    dotnet ef database update
    ```
 
-4. **Run the application**
+5. **Run the application**
    ```bash
    dotnet run
    ```
@@ -128,13 +139,13 @@ SmartGear Online/
 ├── Extensions/
 │   └── SessionExtensions.cs  # JSON session helpers
 ├── Filters/
-│   ├── GlobalExeptionFilter.cs
+│   ├── GlobalExceptionFilter.cs
 │   └── LoggingActionsFilter.cs
 ├── Hubs/
 │   ├── ChatHub.cs
 │   └── InventoryHub.cs
 ├── Middleware/
-│   ├── RequestPathLoggingMidddleware.cs
+│   ├── RequestPathLoggingMiddleware.cs
 │   └── Security/SecurityHeadersMiddleware.cs
 ├── Migrations/               # EF Core migrations
 ├── Models/
@@ -158,13 +169,17 @@ SmartGear Online/
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Testing
 
+> **Status: in progress.** The project references `xUnit` and `Moq` in
+> `SmartGear Online.csproj`, but a dedicated test project has not been added
+> yet. Planned coverage includes cart total calculations, discount code
+> validation, and order status transitions.
+
+Once test files are added, run:
 ```bash
 dotnet test
 ```
-
-Unit tests cover core business logic including cart calculations, order validation, product inventory rules & data access.
 
 ---
 
@@ -188,10 +203,45 @@ The following bugs were identified & resolved during development:
 | 6 | `Register.cshtml` missing `ValidationSummary` | Added — Identity errors were silently swallowed |
 | 7 | Phone & password regex too restrictive on registration | Relaxed to accept SA numbers & any special character |
 | 8 | Nullable reference warnings across Models & Services | Added `= string.Empty` defaults & nullable `?` navigation properties |
+| 9 | Customization items silently lost (empty `ICartRepository`) | `CustomizationController` now saves directly to the session cart |
+| 10 | Discount codes validated client-side only | Validation moved server-side via `IOrderService.ApplyDiscountAsync` |
+| 11 | Admin seed password hardcoded in source | Read from `dotnet user-secrets` (`SeedAdmin:Password`) |
+| 12 | Race condition in `ChatHub` typing indicator | `Dictionary` → `ConcurrentDictionary` |
+| 13 | `AddProduct`/`EditProduct` links in Inventory pointed to missing views/actions | Added `AddProduct.cshtml`; `EditProduct` now redirects to the existing `Product/Edit` |
+| 14 | Homepage contact modal had no working Send button | Added `HomeController.ContactAjax` JSON endpoint + fetch() wiring |
+| 15 | Dead `SearchSuggestions` AJAX call (404 on every keystroke) | Added the missing controller action with debounced client-side calls |
+
+> **Note on product images:** the images referenced in seed data and views
+> (`/images/products/*.jpg`, `/images/hero-bg-stadium.jpg`) currently ship as
+> placeholder graphics. Replace them with real photography before a public
+> demo — see the Image Guidelines section below.
 
 ---
 
-## 📚 Academic Context
+## 🖼 Image Guidelines
+
+Placeholder images currently ship in `wwwroot/images/`. To replace them with
+real photography:
+
+| File | Used for | What to look for |
+|---|---|---|
+| `images/hero-bg-stadium.jpg` | Homepage hero background | Wide stadium/field shot, dark or duotone tone (text overlays on top), 1920×700px or larger, landscape |
+| `images/products/jersey1.jpg` | Featured jersey card | Clean product shot of a single jersey, plain/white background or worn on a mannequin, square-ish (800×800–800×600) |
+| `images/products/shoe1.jpg` | Featured shoe card | Side-angle sports shoe product shot, plain background, same aspect ratio as above |
+| `images/products/gear1.jpg` | Featured gear card | Training/sports equipment flat-lay or product shot (balls, gloves, bags) |
+
+**Sourcing options:**
+- **Free stock photography:** [Unsplash](https://unsplash.com) and [Pexels](https://pexels.com) — search "sports jersey," "athletic shoes product shot," "sports equipment flat lay." Both are free for commercial/academic use, no attribution required (attribution still appreciated).
+- **AI-generated:** consistent style across all four images, useful if you want a unified "brand" look rather than mixed stock photo styles.
+- **Your own photography:** if you can photograph real jerseys/shoes/gear against a plain background, this gives the most authentic, original result for a portfolio piece.
+
+Keep all product images at a consistent aspect ratio (the cards crop to
+`height: 250px; object-fit: cover`, so slight cropping is fine, but avoid
+extreme portrait or panoramic shots). Compress to under ~200KB each — large
+unoptimized images will slow down page loads noticeably once you add more
+than 3–4 products.
+
+---
 
 **Programme:** Higher Certificate in Full Stack Web & Software Development — NQF Level 5
 **Institution:** Academic Institute of Excellence (AIE)
@@ -214,7 +264,7 @@ The following bugs were identified & resolved during development:
 
 **Angelo Puza**
 📍 Johannesburg, Gauteng, South Africa
-📧 spuza218@gmail.com
+📧 support@smartgear.com
 🔗 [GitHub](https://github.com/Ang3loSP) | [Portfolio](https://angelo-puza-portfolio.netlify.app)
 
 ---
