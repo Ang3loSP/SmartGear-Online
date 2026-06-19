@@ -114,6 +114,38 @@ namespace SmartGear_Online.Controllers
         }
 
         /// <summary>
+        /// GET: /product/searchsuggestions?query=jer
+        /// FIX: this action was missing entirely. site.js had a live
+        /// keyup handler calling it on every keystroke in the search box,
+        /// generating a silent 404 each time. Returns a small JSON array
+        /// of matching product names for a lightweight autocomplete.
+        /// </summary>
+        [HttpGet("searchsuggestions")]
+        [ResponseCache(Duration = 60, VaryByQueryKeys = new[] { "query" })]
+        public async Task<IActionResult> SearchSuggestions(string query)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+                    return Json(new List<string>());
+
+                var products = await _productRepository.SearchProductsAsync(query);
+
+                var suggestions = products
+                    .Take(5)
+                    .Select(p => p.ProductName)
+                    .ToList();
+
+                return Json(suggestions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving search suggestions");
+                return Json(new List<string>());
+            }
+        }
+
+        /// <summary>
         /// GET: /product/category/jerseys (filter by category)
         /// QUESTION 11.3: Response caching for 30 minutes
         /// For route parameters, use VaryByQueryKeys - they work with route values too

@@ -1,5 +1,5 @@
 ﻿// ================================================
-// QUESTION 7 &amp; 8: CLIENT-SIDE FUNCTIONALITY
+// QUESTION 7 & 8: CLIENT-SIDE FUNCTIONALITY
 // ================================================
 
 $(document).ready(function () {
@@ -16,6 +16,9 @@ $(document).ready(function () {
 
     // Fade-in animation for main content
     $('.main-content').addClass('fade-in');
+
+    // Live search suggestions, if a search box is present on the page
+    initSearchSuggestions();
 });
 
 // ================================================
@@ -94,6 +97,69 @@ function removeCartItem(itemId) {
             }
         });
     }
+}
+
+// ================================================
+// Live Search Suggestions
+// FIX: previously called a non-existent endpoint and 404'd on
+// every keystroke. ProductController.SearchSuggestions() now
+// exists, and the call is debounced so it doesn't fire on every
+// single keypress.
+// ================================================
+
+function initSearchSuggestions() {
+    var $input = $('#searchInput');
+    if ($input.length === 0) return;
+
+    var debounceTimer = null;
+
+    // Suggestions dropdown, created once and reused
+    var $dropdown = $('<div id="searchSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050; display:none;"></div>');
+    $input.parent().css('position', 'relative').append($dropdown);
+
+    $input.on('keyup', function () {
+        var query = $(this).val().trim();
+
+        clearTimeout(debounceTimer);
+
+        if (query.length < 2) {
+            $dropdown.hide().empty();
+            return;
+        }
+
+        debounceTimer = setTimeout(function () {
+            $.ajax({
+                url: '/Product/SearchSuggestions',
+                type: 'GET',
+                data: { query: query },
+                success: function (suggestions) {
+                    $dropdown.empty();
+
+                    if (!suggestions || suggestions.length === 0) {
+                        $dropdown.hide();
+                        return;
+                    }
+
+                    suggestions.forEach(function (name) {
+                        var $item = $('<a href="/Product/Search?query=' + encodeURIComponent(name) + '" class="list-group-item list-group-item-action"></a>').text(name);
+                        $dropdown.append($item);
+                    });
+
+                    $dropdown.show();
+                },
+                error: function () {
+                    $dropdown.hide();
+                }
+            });
+        }, 250);
+    });
+
+    // Hide the dropdown when clicking elsewhere
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('#searchInput, #searchSuggestions').length) {
+            $dropdown.hide();
+        }
+    });
 }
 
 // ================================================
