@@ -2,7 +2,69 @@
     ViewData["Title"] = "Contact Us";
 }
 
-<div class="container my-5">
-    <h1>Contact Us</h1>
-    <p>Get in touch with our support team.</p>
+<div class="container my-5" style="max-width: 700px;">
+    <h1 class="mb-2">Contact Us</h1>
+    <p class="text-muted mb-4">Have a question about an order, customisation, or anything else? Send us a message.</p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form asp-controller="Home" asp-action="Contact" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label for="name" class="form-label fw-semibold">Full Name</label>
+                    <input type="text" id="name" name="name" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label fw-semibold">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="subject" class="form-label fw-semibold">Subject</label>
+                    <input type="text" id="subject" name="subject" class="form-control" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="message" class="form-label fw-semibold">Message</label>
+                    <textarea id="message" name="message" class="form-control" rows="5" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Send Message
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mt-5 text-center">
+        <div class="col-md-4 mb-3">
+            <i class="fas fa-envelope fa-lg text-primary mb-2"></i>
+            <p class="small mb-0">support@smartgear.com</p>
+        </div>
+        <div class="col-md-4 mb-3">
+            <i class="fas fa-phone fa-lg text-primary mb-2"></i>
+            <p class="small mb-0">+27 (0) 11 234 5678</p>
+        </div>
+        <div class="col-md-4 mb-3">
+            <i class="fas fa-map-marker-alt fa-lg text-primary mb-2"></i>
+            <p class="small mb-0">Johannesburg, South Africa</p>
+        </div>
+    </div>
 </div>

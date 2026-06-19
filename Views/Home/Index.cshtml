@@ -294,32 +294,34 @@
             </div>
 
             <div class="modal-body">
-                <form>
+                <div id="contactModalAlert" class="alert d-none" role="alert"></div>
+                <form id="contactModalForm">
+                    @Html.AntiForgeryToken()
                     <div class="mb-3">
                         <label for="contactName" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="contactName" required>
+                        <input type="text" class="form-control" id="contactName" name="name" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="contactEmail" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="contactEmail" required>
+                        <input type="email" class="form-control" id="contactEmail" name="email" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="contactSubject" class="form-label">Subject</label>
-                        <input type="text" class="form-control" id="contactSubject" required>
+                        <input type="text" class="form-control" id="contactSubject" name="subject" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="contactMessage" class="form-label">Message</label>
-                        <textarea class="form-control" id="contactMessage" rows="4" required></textarea>
+                        <textarea class="form-control" id="contactMessage" name="message" rows="4" required></textarea>
                     </div>
                 </form>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Send Message</button>
+                <button type="button" id="contactModalSendBtn" class="btn btn-primary">Send Message</button>
             </div>
         </div>
     </div>
@@ -347,6 +349,57 @@
                 card.style.transition = 'all 0.5s ease';
                 observer.observe(card);
             });
+
+            // FIX: wire up the contact modal Send Message button.
+            // It previously had no click handler and submitted nothing.
+            const sendBtn = document.getElementById('contactModalSendBtn');
+            if (sendBtn) {
+                sendBtn.addEventListener('click', function () {
+                    const form = document.getElementById('contactModalForm');
+                    const alertBox = document.getElementById('contactModalAlert');
+
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
+
+                    const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+                    const formData = new FormData(form);
+
+                    sendBtn.disabled = true;
+                    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+
+                    fetch('/Home/ContactAjax', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            alertBox.classList.remove('d-none', 'alert-success', 'alert-danger');
+                            alertBox.classList.add(data.success ? 'alert-success' : 'alert-danger');
+                            alertBox.textContent = data.message;
+
+                            if (data.success) {
+                                form.reset();
+                                setTimeout(() => {
+                                    const modalEl = document.getElementById('contactModal');
+                                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                                    alertBox.classList.add('d-none');
+                                }, 1500);
+                            }
+                        })
+                        .catch(() => {
+                            alertBox.classList.remove('d-none', 'alert-success');
+                            alertBox.classList.add('alert-danger');
+                            alertBox.textContent = 'Something went wrong. Please try again.';
+                        })
+                        .finally(() => {
+                            sendBtn.disabled = false;
+                            sendBtn.innerHTML = 'Send Message';
+                        });
+                });
+            }
         });
     </script>
 }
@@ -365,13 +418,13 @@
             border: none;
         }
 
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
-        }
+            .product-card:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+            }
 
-        .product-card img:hover {
-            filter: brightness(1.1);
-        }
+            .product-card img:hover {
+                filter: brightness(1.1);
+            }
     </style>
 }

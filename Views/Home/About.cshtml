@@ -2,7 +2,68 @@
     ViewData["Title"] = "About Us";
 }
 
-<div class="container my-5">
-    <h1>About SmartGear</h1>
-    <p>Your trusted partner for custom sports equipment.</p>
+<div class="container my-5" style="max-width: 850px;">
+    <h1 class="mb-4">About SmartGear Online</h1>
+
+    <p class="lead">
+        SmartGear Online is a custom sports equipment platform built for teams, clubs,
+        and organisations across South Africa who want professionally branded gear
+        without the hassle of dealing with a traditional supplier.
+    </p>
+
+    <hr class="my-4">
+
+    <h3 class="mb-3">What we do</h3>
+    <p>
+        We make it simple to order custom jerseys, shoes, and team gear online.
+        Choose a product, personalise it with your team colours, name, number, and
+        logo, and place your order in minutes. Every order is tracked from
+        confirmation through to delivery, so you always know where things stand.
+    </p>
+
+    <h3 class="mb-3 mt-4">Why teams choose us</h3>
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-palette fa-2x text-primary mb-3"></i>
+                    <h5>Full Customisation</h5>
+                    <p class="text-muted small">Colours, text, and logo uploads tailored to your team's identity.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-truck fa-2x text-primary mb-3"></i>
+                    <h5>Order Tracking</h5>
+                    <p class="text-muted small">Follow your order from production through to delivery in real time.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-headset fa-2x text-primary mb-3"></i>
+                    <h5>Real Support</h5>
+                    <p class="text-muted small">Live chat support to help with sizing, customisation, or order questions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mb-3 mt-4">Our story</h3>
+    <p>
+        SmartGear Online started as a way to solve a common frustration for local
+        sports teams: getting custom kit made was slow, expensive, and hard to
+        track. We built a platform that puts the whole process online — from design
+        to delivery — so teams of any size can get professional gear without the
+        back-and-forth.
+    </p>
+
+    <div class="text-center mt-5">
+        <a asp-controller="Product" asp-action="Index" class="btn btn-primary btn-lg">
+            <i class="fas fa-shopping-bag me-2"></i> Browse Our Products
+        </a>
+    </div>
 </div>

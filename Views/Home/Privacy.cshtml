@@ -1,6 +1,64 @@
 ﻿@{
     ViewData["Title"] = "Privacy Policy";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="container my-5" style="max-width: 800px;">
+    <h1 class="mb-2">@ViewData["Title"]</h1>
+    <p class="text-muted mb-4">Last updated: @DateTime.Now.ToString("MMMM yyyy")</p>
+
+    <p>
+        SmartGear Online ("we", "us") is committed to protecting your personal
+        information in line with South Africa's Protection of Personal Information
+        Act (POPIA). This policy explains what information we collect, why we
+        collect it, and how it's used.
+    </p>
+
+    <h4 class="mt-4">Information we collect</h4>
+    <ul>
+        <li>Account details: name, email address, and password (stored securely, never in plain text)</li>
+        <li>Order details: shipping address, billing address, and order history</li>
+        <li>Customisation details: colours, text, and logo images you upload for custom products</li>
+        <li>Usage data: pages visited and actions taken, used only to improve the platform</li>
+    </ul>
+
+    <h4 class="mt-4">How we use your information</h4>
+    <ul>
+        <li>To process and fulfil your orders</li>
+        <li>To send order confirmations and status updates</li>
+        <li>To respond to support and contact requests</li>
+        <li>To maintain account security, including login and lockout protection</li>
+    </ul>
+
+    <h4 class="mt-4">What we don't do</h4>
+    <ul>
+        <li>We do not sell or rent your personal information to third parties</li>
+        <li>We do not store payment card details on our servers</li>
+        <li>We do not share your data with marketers without your consent</li>
+    </ul>
+
+    <h4 class="mt-4">Your rights under POPIA</h4>
+    <p>
+        You have the right to access, correct, or request deletion of your
+        personal information at any time. To make a request, contact us using the
+        details on our <a asp-controller="Home" asp-action="Contact">Contact page</a>.
+    </p>
+
+    <h4 class="mt-4">Data security</h4>
+    <p>
+        Passwords are hashed and never stored in plain text. Account sessions use
+        secure, HTTP-only cookies, and repeated failed login attempts trigger a
+        temporary account lockout to protect against unauthorised access.
+    </p>
+
+    <h4 class="mt-4">Changes to this policy</h4>
+    <p>
+        We may update this policy from time to time. Material changes will be
+        reflected on this page with an updated revision date.
+    </p>
+
+    <p class="mt-4 text-muted small">
+        This is a student project built for academic purposes. This policy is
+        provided as a realistic example and should be reviewed by a legal
+        professional before use in a live commercial deployment.
+    </p>
+</div>
