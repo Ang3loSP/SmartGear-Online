@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,23 +10,18 @@ using System.Threading.Tasks;
 namespace SmartGear_Online.Hubs
 {
     /// <summary>
-    /// QUESTION 11.5 & 11.6: SignalR Hub for real-time chat
-    /// Features:
-    /// - Real-time message sending (11.5)
-    /// - Typing indicators (11.5)
-    /// - Active user tracking (11.6)
-    /// - Admin notifications when customers connect (11.6)
+    /// QUESTION 11.5 &amp; 11.6: SignalR Hub for real-time chat.
+    /// FIX: _connectedUsers and _typingUsers are now ConcurrentDictionary
+    /// to prevent race conditions from the background typing-clear task.
     /// </summary>
     [Authorize]
     public class ChatHub : Hub
     {
         private readonly ILogger<ChatHub> _logger;
 
-        // Track connected users with their connection IDs and roles
-        private static readonly Dictionary<string, UserConnection> _connectedUsers = new();
-
-        // Track typing status
-        private static readonly Dictionary<string, DateTime> _typingUsers = new();
+        // FIX: ConcurrentDictionary is thread-safe — no lock required
+        private static readonly ConcurrentDictionary<string, UserConnection> _connectedUsers = new();
+        private static readonly ConcurrentDictionary<string, DateTime> _typingUsers = new();
 
         public ChatHub(ILogger<ChatHub> logger)
         {
@@ -33,7 +29,7 @@ namespace SmartGear_Online.Hubs
         }
 
         // ================================================
-        // QUESTION 11.5 & 11.6: CONNECTION HANDLING
+        // CONNECTION HANDLING
         // ================================================
 
         public override async Task OnConnectedAsync()
@@ -42,7 +38,6 @@ namespace SmartGear_Online.Hubs
             var userName = Context.User?.Identity?.Name ?? "Unknown";
             var isAdmin = Context.User?.IsInRole("Admin") ?? false;
 
-            // Store user connection info
             _connectedUsers[Context.ConnectionId] = new UserConnection
             {
                 UserId = userId,
@@ -52,65 +47,53 @@ namespace SmartGear_Online.Hubs
                 ConnectedAt = DateTime.Now
             };
 
-            _logger.LogInformation("User {UserName} connected. ConnectionId: {ConnectionId}. IsAdmin: {IsAdmin}",
+            _logger.LogInformation(
+                "User {UserName} connected. ConnectionId: {ConnectionId}. IsAdmin: {IsAdmin}",
                 userName, Context.ConnectionId, isAdmin);
 
-            // QUESTION 11.6: Notify admins when a customer connects
             if (!isAdmin)
             {
                 await Clients.Group("Admins").SendAsync("UserConnected", new
                 {
                     UserName = userName,
-                    Message = $"{userName} has joined the chat",
+                    Message = userName + " has joined the chat",
                     Timestamp = DateTime.Now.ToString("HH:mm:ss")
                 });
             }
 
-            // Add to appropriate group for targeted messaging
             if (isAdmin)
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
-
-                // QUESTION 11.6: Send active users list to new admin
                 await SendActiveUsersToAdmin(Context.ConnectionId);
             }
 
-            // QUESTION 11.6: Broadcast updated user count to all
             await Clients.All.SendAsync("UserCountUpdated", GetActiveUserCount());
-
             await base.OnConnectedAsync();
         }
 
-        // ================================================
-        // FIXED: Added ? to Exception parameter (Error 8 fix)
-        // ================================================
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            if (_connectedUsers.TryGetValue(Context.ConnectionId, out var user))
+            if (_connectedUsers.TryRemove(Context.ConnectionId, out var user))
             {
                 var userName = user.UserName;
                 var isAdmin = user.IsAdmin;
 
-                _connectedUsers.Remove(Context.ConnectionId);
-                _typingUsers.Remove(user.UserId);
+                // FIX: TryRemove is atomic on ConcurrentDictionary
+                _typingUsers.TryRemove(user.UserId, out _);
 
                 _logger.LogInformation("User {UserName} disconnected", userName);
 
-                // QUESTION 11.6: Notify admins when a customer disconnects
                 if (!isAdmin)
                 {
                     await Clients.Group("Admins").SendAsync("UserDisconnected", new
                     {
                         UserName = userName,
-                        Message = $"{userName} has left the chat",
+                        Message = userName + " has left the chat",
                         Timestamp = DateTime.Now.ToString("HH:mm:ss")
                     });
                 }
 
-                // QUESTION 11.6: Broadcast updated user count
                 await Clients.All.SendAsync("UserCountUpdated", GetActiveUserCount());
-
-                // QUESTION 11.6: Update active users list for admins
                 await UpdateActiveUsersList();
             }
 
@@ -118,13 +101,9 @@ namespace SmartGear_Online.Hubs
         }
 
         // ================================================
-        // QUESTION 11.5: REAL-TIME MESSAGE SENDING
+        // QUESTION 11.5: MESSAGE SENDING
         // ================================================
 
-        /// <summary>
-        /// Sends a message to all connected clients in real-time
-        /// QUESTION 11.5: Core real-time messaging functionality
-        /// </summary>
         public async Task SendMessage(string message)
         {
             if (string.IsNullOrWhiteSpace(message))
@@ -134,9 +113,6 @@ namespace SmartGear_Online.Hubs
             var userName = Context.User?.Identity?.Name ?? "Anonymous";
             var isAdmin = Context.User?.IsInRole("Admin") ?? false;
 
-            _logger.LogInformation("Message from {UserName}: {Message}", userName, message);
-
-            // Prevent spam - limit message length
             if (message.Length > 500)
             {
                 await Clients.Caller.SendAsync("ErrorMessage", "Message too long (max 500 characters)");
@@ -152,18 +128,14 @@ namespace SmartGear_Online.Hubs
                 UserId = userId
             };
 
-            // Broadcast to ALL connected clients (customers and admins)
             await Clients.All.SendAsync("ReceiveMessage", messageData);
         }
 
         // ================================================
         // QUESTION 11.5: TYPING INDICATOR
+        // FIX: background task uses ConcurrentDictionary safely
         // ================================================
 
-        /// <summary>
-        /// Shows when a user is typing in real-time
-        /// QUESTION 11.5: Typing indicator functionality
-        /// </summary>
         public async Task UserTyping(string userName, bool isTyping)
         {
             if (string.IsNullOrWhiteSpace(userName))
@@ -175,40 +147,35 @@ namespace SmartGear_Online.Hubs
             {
                 _typingUsers[userId] = DateTime.Now;
 
-                // Auto-clear typing indicator after 3 seconds of no typing
+                // Background clear — safe because ConcurrentDictionary is thread-safe
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(3000);
                     if (_typingUsers.TryGetValue(userId, out var lastTyping) &&
                         (DateTime.Now - lastTyping).TotalSeconds >= 3)
                     {
-                        _typingUsers.Remove(userId);
+                        _typingUsers.TryRemove(userId, out _);
                         await Clients.All.SendAsync("UserTyping", userName, false);
                     }
                 });
             }
             else
             {
-                _typingUsers.Remove(userId);
+                _typingUsers.TryRemove(userId, out _);
             }
 
             await Clients.All.SendAsync("UserTyping", userName, isTyping);
         }
 
         // ================================================
-        // QUESTION 11.6: PRIVATE MESSAGING (Admin to Customer)
+        // QUESTION 11.6: PRIVATE MESSAGING
         // ================================================
 
-        /// <summary>
-        /// Send a private message to a specific user
-        /// QUESTION 11.6: Private messaging between admin and customer
-        /// </summary>
         public async Task SendPrivateMessage(string targetUserId, string message)
         {
             var senderName = Context.User?.Identity?.Name ?? "Anonymous";
             var isAdmin = Context.User?.IsInRole("Admin") ?? false;
 
-            // Only admins can initiate private messages (or users can message admins)
             var targetConnection = _connectedUsers.Values
                 .FirstOrDefault(u => u.UserId == targetUserId);
 
@@ -227,24 +194,17 @@ namespace SmartGear_Online.Hubs
                 await Clients.Client(targetConnection.ConnectionId)
                     .SendAsync("ReceivePrivateMessage", privateMessage);
 
-                // Also send confirmation to sender
                 await Clients.Caller.SendAsync("PrivateMessageSent", privateMessage);
             }
         }
 
         // ================================================
-        // QUESTION 11.6: GET ACTIVE USERS (Admin only)
+        // QUESTION 11.6: ACTIVE USERS (Admin only)
         // ================================================
 
-        /// <summary>
-        /// Returns list of currently active users
-        /// QUESTION 11.6: Active user list for admin dashboard
-        /// </summary>
         public async Task<List<ActiveUserInfo>> GetActiveUsers()
         {
-            var isAdmin = Context.User?.IsInRole("Admin") ?? false;
-
-            if (!isAdmin)
+            if (!(Context.User?.IsInRole("Admin") ?? false))
                 return new List<ActiveUserInfo>();
 
             var activeUsers = _connectedUsers.Values
@@ -261,14 +221,11 @@ namespace SmartGear_Online.Hubs
             return await Task.FromResult(activeUsers);
         }
 
-        // ================================================
-        // QUESTION 11.6: HELPER METHODS
-        // ================================================
+        // ------------------------------------------------
+        // Private helpers
+        // ------------------------------------------------
 
-        private int GetActiveUserCount()
-        {
-            return _connectedUsers.Count;
-        }
+        private int GetActiveUserCount() => _connectedUsers.Count;
 
         private async Task SendActiveUsersToAdmin(string adminConnectionId)
         {
@@ -301,9 +258,9 @@ namespace SmartGear_Online.Hubs
         }
     }
 
-    // ================================================
-    // DTO CLASSES FOR SIGNALR MESSAGES
-    // ================================================
+    // ------------------------------------------------
+    // DTOs
+    // ------------------------------------------------
 
     public class UserConnection
     {
