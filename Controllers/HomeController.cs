@@ -78,7 +78,7 @@ namespace SmartGear_Online.Controllers
 
         /// <summary>
         /// POST: /Home/Contact
-        /// Handles contact form submission
+        /// Handles contact form submission from the dedicated Contact page
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -94,7 +94,28 @@ namespace SmartGear_Online.Controllers
             _logger.LogInformation("Contact form submitted by {Name} ({Email}): {Subject}", name, email, subject);
 
             TempData["Success"] = "Thank you for contacting us. We'll get back to you soon!";
-            return RedirectToAction("Index");
+            return RedirectToAction("Contact");
+        }
+
+        /// <summary>
+        /// POST: /Home/ContactAjax
+        /// FIX: JSON endpoint for the homepage "Contact Us" modal, which
+        /// submits via fetch() and needs a JSON response rather than a
+        /// redirect. Shares the same validation and logging logic as the
+        /// full Contact page above.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ContactAjax(string name, string email, string subject, string message)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(message))
+            {
+                return Json(new { success = false, message = "Please fill in all required fields." });
+            }
+
+            _logger.LogInformation("Contact modal submitted by {Name} ({Email}): {Subject}", name, email, subject);
+
+            return Json(new { success = true, message = "Thank you for contacting us. We'll get back to you soon!" });
         }
 
         /// <summary>
