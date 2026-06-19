@@ -26,7 +26,7 @@ namespace SmartGear_Online.Controllers
 
         // ================================================
         // DASHBOARD - Admin only
-        // Fixed: Now builds & passes AdminDashboardViewModel
+        // Builds & passes AdminDashboardViewModel
         // ================================================
         [HttpGet]
         public async Task<IActionResult> Dashboard()
@@ -112,7 +112,7 @@ namespace SmartGear_Online.Controllers
         [HttpGet]
         public IActionResult AddProduct()
         {
-            return View();
+            return View(new Product());
         }
 
         [HttpPost]
@@ -121,10 +121,26 @@ namespace SmartGear_Online.Controllers
         {
             if (ModelState.IsValid)
             {
+                product.CreatedDate = DateTime.UtcNow;
+                product.UpdatedDate = DateTime.UtcNow;
                 await _productRepository.AddProductAsync(product);
+
+                TempData["Success"] = "'" + product.ProductName + "' was added successfully.";
                 return RedirectToAction("Inventory");
             }
             return View(product);
+        }
+
+        // ================================================
+        // FIX: EditProduct was missing entirely — Inventory.cshtml
+        // linked here but the action didn't exist, causing a 404.
+        // Reuses the existing Product/Edit view to avoid duplicating
+        // the edit form markup that already works correctly.
+        // ================================================
+        [HttpGet]
+        public IActionResult EditProduct(int id)
+        {
+            return RedirectToAction("Edit", "Product", new { id });
         }
 
         // ================================================
