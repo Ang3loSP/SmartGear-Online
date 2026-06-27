@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SmartGear_Online.Data;
 using SmartGear_Online.Filters;
 using SmartGear_Online.Hubs;
@@ -172,7 +173,28 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    await SeedRolesAndAdminAsync(services, app.Configuration);
+    var startupLogger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        // FIX: apply any pending EF Core migrations automatically on startup.
+        // Without this, a freshly-provisioned Azure SQL database has no schema
+        // at all, so the very first query below (RoleExistsAsync) throws and
+        // crashes the whole app before it can start listening -> HTTP 500.30.
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        await context.Database.MigrateAsync();
+
+        await SeedRolesAndAdminAsync(services, app.Configuration);
+    }
+    catch (Exception ex)
+    {
+        // FIX: a database problem (bad connection string, firewall blocking
+        // Azure App Service, DB not reachable yet) must NOT take the whole
+        // site down. Log it and let the app keep starting; pages that don't
+        // touch the database will still work, and the real error is visible
+        // in the App Service log stream instead of a bare 500.30.
+        startupLogger.LogError(ex, "Database migration/seeding failed during startup.");
+    }
 }
 
 // ============================================================================
@@ -214,7 +236,7 @@ app.MapHub<ChatHub>("/chathub");
 app.Run();
 
 // ============================================================================
-// SEED ADMIN — password read from config, never hardcoded in source
+// SEED ADMIN - password read from config, never hardcoded in source
 // HOW TO SET THE SECRET (run once in the project folder):
 //   dotnet user-secrets init
 //   dotnet user-secrets set "SeedAdmin:Password" "YourStrongPassword123!"

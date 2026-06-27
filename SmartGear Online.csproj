@@ -9,24 +9,32 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.27" />
+    <!-- FIX: Identity.UI was pinned to 7.0.20 in a net8.0 project - mismatched
+         major version, can trigger a NuGet downgrade warning/restore failure
+         on a clean machine (e.g. a fresh Azure/CI build agent) even when it
+         happens to restore locally because packages were already cached. -->
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="7.0.20" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
-    <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
+  <!-- FIX: removed packages that were unused dead weight or actively risky:
+       - Microsoft.AspNetCore.SignalR 1.2.10: this is the old standalone
+         SignalR package from the ASP.NET Core 2.x era. Server-side SignalR
+         for net8.0 ships inside the Microsoft.AspNetCore.App shared
+         framework already (that's what builder.Services.AddSignalR() uses) -
+         this reference added nothing but an ancient, incompatible package.
+       - Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore: never referenced
+         in code (no UseDatabaseErrorPage/migrations endpoint usage).
+       - Microsoft.EntityFrameworkCore.InMemory: never referenced (AddDbContext
+         only ever calls UseSqlServer).
+       - Microsoft.NET.Test.Sdk / Moq / xunit / xunit.runner.visualstudio:
+         there are no test files in this project (README correctly states no
+         automated tests exist yet) - these pulled in the entire VSTest
+         toolchain for nothing, bloating restore time and publish output. -->
 
   <ItemGroup>
     <Folder Include="wwwroot\images\" />
