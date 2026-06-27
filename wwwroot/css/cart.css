@@ -14,18 +14,17 @@
     text-align: center;
 }
 
-.sticky-top {
-    top: 100px;
-}
-
-/* Responsive Styles */
-@media (max-width: 991px) {
-    .sticky-top {
-        position: relative !important;
-        top: 0 !important;
-        margin-top: 20px;
-    }
-}
+/* FIX: removed a stray, unscoped ".sticky-top { top: 100px; }" rule that
+   used to live here. Nothing in this page's own markup uses the
+   "sticky-top" class - but the navbar partial (_Navigation.cshtml) does,
+   since it's Bootstrap's own utility class. Because this stylesheet only
+   loads on the Cart page, that rule was leaking straight into the navbar &
+   pushing it 100px down from the top of the viewport instead of flush
+   against it - and the matching @media block below it forced the navbar to
+   stop sticking entirely on screens under 992px. Neither rule did anything
+   useful for this page; track.css shows the correct pattern - scope sticky
+   offsets to a specific class (.order-summary-card here), never to the
+   bare .sticky-top class itself. */
 
 .qty-input {
     max-width: 60px;
@@ -52,17 +51,18 @@
 
 /* Order Summary Card */
 .order-summary-card {
-    position: sticky;
-    top: 100px;
+    position: static;
 }
 
-@media (max-width: 991px) {
-    .order-summary-card {
-        position: relative !important;
-        top: 0 !important;
-        margin-top: 20px;
+    /* Cancel the global .card:hover lift effect for this card - keeps it
+   visually calm/consistent rather than bouncing on hover like product
+   cards do. */
+    .order-summary-card,
+    .order-summary-card:hover {
+        transform: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        overflow: visible;
     }
-}
 
 /* Discount Code Input */
 .discount-input:focus {

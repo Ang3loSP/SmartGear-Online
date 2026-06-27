@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "A2U77hIEvvs=",
+  "dgSpecHash": "JI6i83eH3bA=",
   "success": true,
-  "projectFilePath": "C:\\Users\\spuza\\Downloads\\SmartGear-Online-FIXED\\SmartGear-Online\\SmartGear Online.csproj",
+  "projectFilePath": "C:\\Users\\spuza\\OneDrive\\Documents\\Angelo Puza GitHub\\SmartGear-Online\\SmartGear Online.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\spuza\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\spuza\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",

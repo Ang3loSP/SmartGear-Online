@@ -17,9 +17,14 @@
         transform: scale(1.1);
     }
 
-.sticky-top {
-    top: 100px;
-}
+/* FIX: removed a stray, unscoped ".sticky-top { top: 100px; }" rule.
+   The order summary card below already gets the correct offset from
+   .summary-card - this duplicate rule did nothing for this page's own
+   markup. But since the navbar partial (_Navigation.cshtml) also carries
+   Bootstrap's own "sticky-top" utility class, & this stylesheet only loads
+   on the Checkout page, the old rule was pushing the navbar 100px down
+   from the top of the viewport here - inconsistent with every other page,
+   where it sticks flush at the top. */
 
 .summary-card {
     position: sticky;

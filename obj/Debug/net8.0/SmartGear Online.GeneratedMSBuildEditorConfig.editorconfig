@@ -9,141 +9,141 @@ build_property.EnforceExtendedAnalyzerRules =
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = SmartGear_Online
 build_property.RootNamespace = SmartGear_Online
-build_property.ProjectDir = C:\Users\spuza\Downloads\SmartGear-Online-FIXED\SmartGear-Online\
+build_property.ProjectDir = C:\Users\spuza\OneDrive\Documents\Angelo Puza GitHub\SmartGear-Online\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.RazorLangVersion = 8.0
 build_property.SupportLocalizedComponentNames = 
 build_property.GenerateRazorMetadataSourceChecksumAttributes = 
-build_property.MSBuildProjectDirectory = C:\Users\spuza\Downloads\SmartGear-Online-FIXED\SmartGear-Online
+build_property.MSBuildProjectDirectory = C:\Users\spuza\OneDrive\Documents\Angelo Puza GitHub\SmartGear-Online
 build_property._RazorSourceGeneratorDebug = 
 build_property.EffectiveAnalysisLevelStyle = 8.0
 build_property.EnableCodeStyleSeverity = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Areas/Identity/Pages/_ViewStart.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Areas/Identity/Pages/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = QXJlYXNcSWRlbnRpdHlcUGFnZXNcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Account/AccessDenied.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Account/AccessDenied.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxBY2Nlc3NEZW5pZWQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Account/Login.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Account/Login.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxMb2dpbi5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Account/Profile.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Account/Profile.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxQcm9maWxlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Account/Register.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Account/Register.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNjb3VudFxSZWdpc3Rlci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Admin/AddProduct.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Admin/AddProduct.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cQWRkUHJvZHVjdC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Admin/Dashboard.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Admin/Dashboard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cRGFzaGJvYXJkLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Admin/Inventory.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Admin/Inventory.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cSW52ZW50b3J5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Cart/Index.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Cart/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2FydFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Chat/Index.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Chat/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hhdFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Customization/Create.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Customization/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ3VzdG9taXphdGlvblxDcmVhdGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Home/About.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Home/About.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxBYm91dC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Home/Contact.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Home/Contact.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxDb250YWN0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Home/Index.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Home/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Home/Privacy.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Home/Privacy.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Order/Checkout.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Order/Checkout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcQ2hlY2tvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Order/Confirmation.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Order/Confirmation.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcQ29uZmlybWF0aW9uLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Order/History.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Order/History.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcSGlzdG9yeS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Order/Track.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Order/Track.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcVHJhY2suY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Product/ApiDemo.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Product/ApiDemo.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxBcGlEZW1vLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Product/Details.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Product/Details.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxEZXRhaWxzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Product/Edit.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Product/Edit.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxFZGl0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Product/Index.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Product/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Product/_ProductCard.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Product/_ProductCard.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxfUHJvZHVjdENhcmQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/Error.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/_Footer.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/_Footer.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9Gb290ZXIuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/_LoginPartial.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/_LoginPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9Mb2dpblBhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/_Navigation.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/_Navigation.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9OYXZpZ2F0aW9uLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/_ValidationScriptsPartial.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/_ValidationScriptsPartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/_ViewImports.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/_ViewStart.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/_ViewStart.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/spuza/Downloads/SmartGear-Online-FIXED/SmartGear-Online/Views/Shared/_Layout.cshtml]
+[C:/Users/spuza/OneDrive/Documents/Angelo Puza GitHub/SmartGear-Online/Views/Shared/_Layout.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = b-guhilpwt2v

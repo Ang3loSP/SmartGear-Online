@@ -1,5 +1,4 @@
 wwwroot\css\admin-dashboard.css
-wwwroot\css\cart.css
 wwwroot\css\checkout.css
 wwwroot\css\customization.css
 wwwroot\css\product.css
@@ -10,7 +9,6 @@ wwwroot\images\hero-bg-stadium.jpg
 wwwroot\images\products\gear1.jpg
 wwwroot\images\products\jersey1.jpg
 wwwroot\images\products\shoe1.jpg
-wwwroot\js\cart.js
 wwwroot\js\site.js
 wwwroot\js\validation.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
@@ -73,3 +71,5 @@ wwwroot\lib\jquery\LICENSE.txt
 wwwroot\scss\components\_buttons.scss
 wwwroot\scss\main.scss
 wwwroot\scss\_variables.scss
+wwwroot\css\cart.css
+wwwroot\js\cart.js

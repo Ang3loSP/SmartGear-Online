@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmartGear Online")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3400b9f0217b72eb6adbf8bc48a5e143676c9aa6")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmartGear Online")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmartGear Online")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

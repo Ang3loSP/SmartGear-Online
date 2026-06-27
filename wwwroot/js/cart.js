@@ -56,8 +56,16 @@ function updateQuantity(itemId, newQuantity) {
         .then(data => {
             if (data.success) {
                 updateCartTotals();
+                if (typeof updateCartCount === 'function') {
+                    updateCartCount();
+                }
             } else {
-                location.reload();
+                // FIX: was location.reload() — a full page reload here just to
+                // report a failed quantity update was the main thing making
+                // this page feel rougher than the rest of the site (every
+                // other page only goes through the load + fade-in once).
+                // Just tell the user & leave the page as it is.
+                alert(data.message || 'Failed to update quantity');
             }
         })
         .catch(error => {
@@ -87,7 +95,31 @@ function removeItem(itemId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                setTimeout(() => { location.reload(); }, 300);
+                // FIX: was location.reload() — that forced a full page reload
+                // (white flash, scroll reset, the site-wide fade-in restarting)
+                // every single time, which is why this page felt rougher than
+                // the rest of the site. Now we just remove the row once the
+                // CSS fade/slide-out transition finishes & recalculate totals,
+                // exactly like updateQuantity already did correctly.
+                setTimeout(() => {
+                    const remainingItems = document.querySelectorAll('.cart-item').length;
+
+                    if (remainingItems <= 1) {
+                        // Last item removed - the page needs to switch to the
+                        // server-rendered "Your Cart is Empty" state, so a
+                        // reload is the right call here, not a workaround.
+                        location.reload();
+                        return;
+                    }
+
+                    if (itemRow) {
+                        itemRow.remove();
+                    }
+                    updateCartTotals();
+                    if (typeof updateCartCount === 'function') {
+                        updateCartCount();
+                    }
+                }, 300);
             } else {
                 alert('Failed to remove item');
                 if (itemRow) itemRow.classList.remove('cart-item-removing');

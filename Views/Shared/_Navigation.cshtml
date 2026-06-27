@@ -49,7 +49,8 @@
                 <li class="nav-item">
                     <a class="nav-link position-relative" asp-controller="Cart" asp-action="Index">
                         <i class="fas fa-shopping-cart fa-lg"></i>
-                        <%-- ID matches cartCountBadge used in site.js --%>
+                        <span class="ms-1">Cart</span>
+                        @* ID matches cartCountBadge used in site.js *@
                         <span id="cartCountBadge"
                               class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
                               style="display:none;">0</span>
