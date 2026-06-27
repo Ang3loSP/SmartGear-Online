@@ -22,7 +22,7 @@ The platform supports product browsing, session-based cart management, order pro
 | ORM | Entity Framework Core 8 (code-first migrations) |
 | Auth | ASP.NET Core Identity (roles: Admin, Customer) |
 | Real-Time | SignalR (chat & inventory hubs) |
-| Testing | xUnit + Moq |
+| Testing | Not yet implemented |
 | Caching | In-memory cache + response caching |
 | Cloud | Microsoft Azure |
 | Dev Tools | Visual Studio 2022, SSMS, Git |
@@ -41,7 +41,7 @@ The platform supports product browsing, session-based cart management, order pro
 - **Real-Time Chat** — SignalR-powered live chat hub
 - **Security** — CSRF protection, security headers middleware, account lockout & cookie hardening
 - **Reporting** — sales reports, revenue breakdowns & inventory status
-- **Testing (in progress)** — `xUnit` & `Moq` referenced, test project not yet added
+- **Testing** — not yet implemented (no automated tests in this project; previously referenced `xUnit`/`Moq` packages were removed from the .csproj as they were unused dead weight)
 
 ---
 
@@ -110,6 +110,10 @@ read from .NET user-secrets — **the password is never stored in source control
    ```bash
    dotnet ef database update
    ```
+   > Not strictly required for local dev — the app now calls `Database.MigrateAsync()`
+   > automatically on startup, applying any pending migrations before seeding
+   > roles & the admin account. This step is still useful if you want migrations
+   > applied before first run, or want to inspect the schema beforehand.
 
 5. **Run the application**
    ```bash
@@ -265,7 +269,7 @@ than 3–4 products.
 **Angelo Puza**
 📍 Johannesburg, Gauteng, South Africa
 📧 support@smartgear.com
-🔗 [GitHub](https://github.com/Ang3loSP) | [Portfolio](https://angelo-puza-portfolio.netlify.app)
+🔗 [GitHub](https://github.com/Ang3loSP) | [Portfolio](https://angelo-puza-portfolio.vercel.app)
 
 ---
 
