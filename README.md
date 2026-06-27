@@ -2,6 +2,8 @@
 
 > A fully functional e-commerce web application built with **ASP.NET Core 8 MVC** & **C#**, developed as part of the Full Stack Web & Software Development programme at the Academic Institute of Excellence (AIE).
 
+## Live Demo
+https://smartgear-angelopuza-bge0fma2hcfzfwdf.southafricanorth-01.azurewebsites.net/
 ---
 
 ## 📌 Overview
