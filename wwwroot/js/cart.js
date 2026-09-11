@@ -21,14 +21,14 @@ function updateCartTotals() {
     const discountRow = document.getElementById('discountRow');
     if (discountRow && discountRow.style.display !== 'none') {
         const discountText = document.getElementById('discountAmount').textContent;
-        discount = parseFloat(discountText.replace('$', '').replace('-', '')) || 0;
+        discount = parseFloat(discountText.replace(/[R$-]/g, '')) || 0;
     }
 
     let shipping = 0;
     const shippingElement = document.getElementById('shipping');
     if (subtotal < 50 && subtotal > 0) {
         shipping = 5.99;
-        shippingElement.innerHTML = '$5.99';
+        shippingElement.innerHTML = 'R5.99';
         shippingElement.classList.remove('text-success');
     } else {
         shippingElement.innerHTML = 'FREE';
@@ -37,8 +37,8 @@ function updateCartTotals() {
 
     const total = subtotal + tax + shipping - discount;
 
-    document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-    document.getElementById('tax').textContent = '$' + tax.toFixed(2);
+    document.getElementById('subtotal').textContent = 'R' + subtotal.toFixed(2);
+    document.getElementById('tax').textContent = 'R' + tax.toFixed(2);
     document.getElementById('total').textContent = total.toFixed(2);
 }
 
@@ -163,7 +163,7 @@ function applyDiscount() {
                     shippingEl.classList.add('text-success');
                 } else {
                     document.getElementById('discountAmount').textContent =
-                        '-$' + parseFloat(data.discountAmount).toFixed(2);
+                        '-R' + parseFloat(data.discountAmount).toFixed(2);
                     document.getElementById('discountRow').style.display = 'flex';
                 }
 

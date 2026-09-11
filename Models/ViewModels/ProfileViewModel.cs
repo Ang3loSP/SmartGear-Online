@@ -35,12 +35,12 @@ namespace SmartGear_Online.Models.ViewModels
 
         [Display(Name = "Total Spent")]
         [DataType(DataType.Currency)]
-        [DisplayFormat(DataFormatString = "{0:C}")]
+        [DisplayFormat(DataFormatString = "R{0:N2}")]
         public decimal TotalSpent { get; set; }
 
         [Display(Name = "Average Order Value")]
         [DataType(DataType.Currency)]
-        [DisplayFormat(DataFormatString = "{0:C}")]
+        [DisplayFormat(DataFormatString = "R{0:N2}")]
         public decimal AverageOrderValue { get; set; }
 
         [Display(Name = "Account Status")]

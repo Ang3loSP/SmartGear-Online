@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using SmartGear_Online.Models;
+using System.Threading.Tasks;
 
 namespace SmartGear_Online.Services
 {
@@ -7,8 +8,7 @@ namespace SmartGear_Online.Services
     public interface INotificationService
     {
         Task SendOrderConfirmationEmailAsync(int orderId, string customerEmail);
-        Task SendOrderStatusUpdateAsync(int orderId, string status,
+        Task SendOrderStatusUpdateAsync(int orderId, OrderStatus status,
                                        string customerEmail);
-        Task SendLowStockAlertAsync(int productId, string productName);
     }
 }

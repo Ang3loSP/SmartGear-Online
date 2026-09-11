@@ -1,84 +1,99 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MimeKit;
+using SmartGear_Online.Models;
 using System.Threading.Tasks;
 
 namespace SmartGear_Online.Services
 {
     /// Question 2: Service Implementation
     /// Implements INotificationService
-    /// Injected into controllers that need to send notifications
+    /// Injected into controllers that need to send notifications.
+    /// Emails are delivered over real SMTP when the "Email" configuration
+    /// section is populated; otherwise they are logged (safe local default).
     public class NotificationService : INotificationService
     {
+        private readonly EmailOptions _options;
         private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(ILogger<NotificationService> logger)
+        public NotificationService(IOptions<EmailOptions> options,
+                                   ILogger<NotificationService> logger)
         {
+            _options = options.Value;
             _logger = logger;
         }
 
         public async Task SendOrderConfirmationEmailAsync(int orderId,
-                                                         string customerEmail)
+                                                          string customerEmail)
         {
-            try
-            {
-                _logger.LogInformation(
-                    "Sending order confirmation email for Order #{OrderId} to {Email}",
-                    orderId, customerEmail);
-
-                // TODO: Integrate with actual email service (SendGrid, Mailgun, etc.)
-                // For now, just log
-                await Task.Delay(100); // Simulate async operation
-
-                _logger.LogInformation("Order confirmation email sent successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Error sending order confirmation email for Order #{OrderId}",
-                    orderId);
-                throw;
-            }
+            await SendAsync(
+                orderId,
+                customerEmail,
+                $"Order #{orderId} confirmed \u2705",
+                $"Hi,\r\n\r\nThank you for shopping with SmartGear Online.\r\n\r\n" +
+                $"Your order #{orderId} has been confirmed and is now being prepared.\r\n\r\n" +
+                "Thanks,\r\nThe SmartGear Online team");
         }
 
-        public async Task SendOrderStatusUpdateAsync(int orderId, string status,
+        public async Task SendOrderStatusUpdateAsync(int orderId, OrderStatus status,
                                                      string customerEmail)
         {
-            try
-            {
-                _logger.LogInformation(
-                    "Sending status update email for Order #{OrderId}: {Status}",
-                    orderId, status);
-
-                await Task.Delay(100); // Simulate async operation
-
-                _logger.LogInformation("Status update email sent successfully");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Error sending status update email for Order #{OrderId}",
-                    orderId);
-                throw;
-            }
+            await SendAsync(
+                orderId,
+                customerEmail,
+                $"Order #{orderId}: status update",
+                $"Hi,\r\n\r\nYour order #{orderId} status has changed to: {status}.\r\n\r\n" +
+                "Thanks,\r\nThe SmartGear Online team");
         }
 
-        public async Task SendLowStockAlertAsync(int productId,
-                                                string productName)
+        private async Task SendAsync(int orderId, string customerEmail,
+                                     string subject, string body)
         {
             try
             {
-                _logger.LogWarning(
-                    "Sending low stock alert for Product #{ProductId}: {ProductName}",
-                    productId, productName);
+                // No SMTP host configured -> log only so local/dev runs stay
+                // green without a mail server.
+                if (string.IsNullOrWhiteSpace(_options.Host))
+                {
+                    _logger.LogInformation(
+                        "Email disabled (no SMTP host configured) - would send " +
+                        "'{Subject}' for Order #{OrderId} to {Email}",
+                        subject, orderId, customerEmail);
+                    return;
+                }
 
-                await Task.Delay(100); // Simulate async operation
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_options.FromName, _options.FromAddress));
+                message.To.Add(MailboxAddress.Parse(customerEmail));
+                message.Subject = subject;
+                message.Body = new TextPart("plain") { Text = body };
 
-                _logger.LogWarning("Low stock alert sent to admins");
+                using var client = new SmtpClient();
+                await client.ConnectAsync(
+                    _options.Host,
+                    _options.Port,
+                    _options.UseSsl
+                        ? SecureSocketOptions.StartTlsWhenAvailable
+                        : SecureSocketOptions.Auto);
+
+                if (!string.IsNullOrEmpty(_options.UserName))
+                {
+                    await client.AuthenticateAsync(_options.UserName, _options.Password);
+                }
+
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+
+                _logger.LogInformation(
+                    "Sent '{Subject}' to {Email} (Order #{OrderId})",
+                    subject, customerEmail, orderId);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Error sending low stock alert for Product #{ProductId}",
-                    productId);
+                    "Error sending email for Order #{OrderId}", orderId);
                 throw;
             }
         }

@@ -90,8 +90,8 @@
                                             <tr>
                                                 <td>@item.ProductName</td>
                                                 <td>@item.Quantity</td>
-                                                <td>$@item.Price.ToString("F2")</td>
-                                                <td>$@((item.Quantity * item.Price).ToString("F2"))</td>
+                                                <td>@("R" + item.Price.ToString("F2"))</td>
+                                                <td>@("R" + (item.Quantity * item.Price).ToString("F2"))</td>
                                             </tr>
                                         }
                                     }
@@ -181,7 +181,7 @@
                                        id="standardShipping" value="Standard" checked onchange="updateShipping()">
                                 <label class="form-check-label" for="standardShipping">
                                     <strong>Standard Shipping (5-7 business days)</strong> -
-                                    <span class="text-success">FREE</span>
+                                    <span class="text-success">R5.99 (FREE on orders over R50)</span>
                                 </label>
                             </div>
 
@@ -190,14 +190,14 @@
                                        id="expressShipping" value="Express" onchange="updateShipping()">
                                 <label class="form-check-label" for="expressShipping">
                                     <strong>Express Shipping (1-2 business days)</strong> -
-                                    <span class="text-primary">+$15.00</span>
+                                    <span class="text-primary">+R15.00</span>
                                 </label>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Delivery Instructions (Optional)</label>
-                            <textarea class="form-control" name="OrderNotes"
+                            <label class="form-label" for="orderNotes">Delivery Instructions (Optional)</label>
+                            <textarea class="form-control" name="OrderNotes" id="orderNotes"
                                       rows="3" placeholder="e.g., Leave at reception desk"></textarea>
                         </div>
                     </div>
@@ -261,33 +261,42 @@
                             Your payment information is encrypted and secure.
                         </p>
 
+                        @* SECURITY FIX: the full card number is captured in the browser only.
+                           It has no `name` attribute, so it is never sent to the server.
+                           On submit, checkout.js copies the last four digits into the
+                           hidden CardNumberLast4 field below. CVV is likewise captured
+                           client-side only and never leaves the page. *@
+                        <input type="hidden" name="CardNumberLast4" id="cardNumberLast4" value="" />
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Card Number *</label>
+                            <label class="form-label fw-bold" for="cardNumberInput">Card Number *</label>
                             <input type="text" class="form-control form-control-lg"
-                                   placeholder="1234 5678 9012 3456" name="CardNumber"
-                                   maxlength="19" required>
+                                   id="cardNumberInput"
+                                   placeholder="1234 5678 9012 3456"
+                                   maxlength="19" autocomplete="cc-number" inputmode="numeric" required>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Expiry Date *</label>
+                                <label class="form-label fw-bold" for="expiryDate">Expiry Date *</label>
                                 <input type="text" class="form-control form-control-lg"
-                                       placeholder="MM/YY" name="ExpiryDate"
-                                       maxlength="5" required>
+                                       id="expiryDate" placeholder="MM/YY" name="ExpiryDate"
+                                       maxlength="5" autocomplete="cc-exp" required>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">CVV *</label>
-                                <input type="text" class="form-control form-control-lg"
-                                       placeholder="123" name="Cvv"
-                                       maxlength="3" required>
+                                <label class="form-label fw-bold" for="cvvInput">CVV *</label>
+                                <input type="password" class="form-control form-control-lg"
+                                       id="cvvInput"
+                                       placeholder="123"
+                                       maxlength="4" autocomplete="cc-csc" inputmode="numeric" required>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Cardholder Name *</label>
+                            <label class="form-label fw-bold" for="cardHolderName">Cardholder Name *</label>
                             <input type="text" class="form-control form-control-lg"
-                                   placeholder="John Smith" name="CardHolderName" required>
+                                   id="cardHolderName" placeholder="John Smith" name="CardHolderName" required>
                         </div>
 
                         <div class="form-check mt-4">
@@ -329,8 +338,8 @@
                                 {
                                     <li class="mb-2 pb-2 border-bottom">
                                         <div class="d-flex justify-content-between">
-                                            <span>@item.ProductName (x@item.Quantity)</span>
-                                            <span class="fw-bold">$@((item.Quantity * item.Price).ToString("F2"))</span>
+                                            <span>@item.ProductName (x@(item.Quantity))</span>
+                                            <span class="fw-bold">@("R" + (item.Quantity * item.Price).ToString("F2"))</span>
                                         </div>
                                     </li>
                                 }
@@ -340,7 +349,7 @@
                         <div class="bg-light p-3 rounded">
                             <div class="d-flex justify-content-between small mb-2">
                                 <span>Subtotal:</span>
-                                <span id="summarySubtotal">$@Model.Subtotal.ToString("F2")</span>
+                                <span id="summarySubtotal">@("R" + Model.Subtotal.ToString("F2"))</span>
                             </div>
 
                             <div class="d-flex justify-content-between small mb-2">
@@ -350,13 +359,13 @@
 
                             <div class="d-flex justify-content-between small mb-3 pb-3 border-bottom">
                                 <span>Tax (8%):</span>
-                                <span id="summaryTax">$@Model.Tax.ToString("F2")</span>
+                                <span id="summaryTax">@("R" + Model.Tax.ToString("F2"))</span>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
                                 <strong>Total:</strong>
                                 <h5 class="text-primary fw-bold mb-0">
-                                    $<span id="summaryTotal">@Model.GrandTotal.ToString("F2")</span>
+                                    R<span id="summaryTotal">@Model.GrandTotal.ToString("F2")</span>
                                 </h5>
                             </div>
                         </div>

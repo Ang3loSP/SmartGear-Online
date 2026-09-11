@@ -35,9 +35,9 @@ namespace SmartGear_Online.Controllers
         // ================================================
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Login(string returnUrl = null)
+        public IActionResult Login(string? returnUrl = null)
         {
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated == true)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -52,7 +52,7 @@ namespace SmartGear_Online.Controllers
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]  // QUESTION 10: CSRF PROTECTION
-        public async Task<IActionResult> Login(LoginViewModel model, string returnUrl = null)
+        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
 
@@ -73,6 +73,14 @@ namespace SmartGear_Online.Controllers
                     var user = await _userManager.FindByEmailAsync(model.Email);
                     if (user != null)
                     {
+                        if (!user.IsActive)
+                        {
+                            _logger.LogWarning("Deactivated account {Email} attempted login", model.Email);
+                            await _signInManager.SignOutAsync();
+                            ModelState.AddModelError(string.Empty, "This account has been deactivated. Please contact support.");
+                            return View(model);
+                        }
+
                         user.LastLoginDate = DateTime.UtcNow;
                         await _userManager.UpdateAsync(user);
                     }
@@ -106,7 +114,7 @@ namespace SmartGear_Online.Controllers
         [AllowAnonymous]
         public IActionResult Register()
         {
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity?.IsAuthenticated == true)
             {
                 return RedirectToAction("Index", "Home");
             }
@@ -171,7 +179,7 @@ namespace SmartGear_Online.Controllers
         [ValidateAntiForgeryToken]  // QUESTION 10: CSRF PROTECTION
         public async Task<IActionResult> Logout()
         {
-            var userEmail = User.Identity.Name;
+            var userEmail = User.Identity?.Name;
             await _signInManager.SignOutAsync();
             _logger.LogInformation("User {Email} logged out", userEmail);
             return RedirectToAction("Index", "Home");
@@ -201,9 +209,9 @@ namespace SmartGear_Online.Controllers
 
             var model = new ProfileViewModel
             {
-                Email = user.Email,
-                FullName = user.FullName,
-                PhoneNumber = user.PhoneNumber,
+                Email = user.Email ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
                 DateRegistered = user.DateRegistered,
                 LastLoginDate = user.LastLoginDate
             };

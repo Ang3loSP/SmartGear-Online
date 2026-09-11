@@ -25,7 +25,7 @@ namespace SmartGear_Online.Models
 
         [Required(ErrorMessage = "Price is required")]
         [Range(0.01, 10000,
-            ErrorMessage = "Price must be between $0.01 & $10,000")]
+            ErrorMessage = "Price must be between R0.01 & R10,000")]
         [DataType(DataType.Currency)]
         [Display(Name = "Price ($)")]
         public decimal Price { get; set; }
@@ -37,6 +37,7 @@ namespace SmartGear_Online.Models
 
         [Required]
         [Url(ErrorMessage = "Please enter a valid image URL")]
+        [StringLength(500)]
         [Display(Name = "Image URL")]
         public string ImageUrl { get; set; } = string.Empty;
 

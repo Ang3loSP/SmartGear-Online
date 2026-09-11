@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SmartGear_Online.Extensions;
 using SmartGear_Online.Models;
 using SmartGear_Online.Repositories;
 using SmartGear_Online.Services;
@@ -14,29 +13,31 @@ namespace SmartGear_Online.Controllers
     {
         private readonly IProductRepository _productRepository;
         private readonly IOrderService _orderService;
+        private readonly ICartService _cartService;
         private readonly ILogger<CartController> _logger;
-
-        private const string CartSessionKey = "ShoppingCart";
 
         public CartController(
             IProductRepository productRepository,
             IOrderService orderService,
+            ICartService cartService,
             ILogger<CartController> logger)
         {
             _productRepository = productRepository;
             _orderService = orderService;
+            _cartService = cartService;
             _logger = logger;
         }
 
         // GET: /Cart
         public IActionResult Index()
         {
-            var cart = GetCart();
+            var cart = _cartService.GetCart();
             return View(cart.Items);
         }
 
         // POST: /Cart/AddToCart
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AddToCart(int productId, int quantity = 1, int? customizationId = null)
         {
             try
@@ -51,14 +52,19 @@ namespace SmartGear_Online.Controllers
                 if (!product.IsInStock())
                     return Json(new { success = false, message = "Product is out of stock" });
 
-                if (quantity > product.QuantityInStock)
-                    return Json(new { success = false, message = "Only " + product.QuantityInStock + " items available" });
+                if (quantity < 1)
+                    return Json(new { success = false, message = "Quantity must be at least 1" });
 
-                var cart = GetCart();
+                // Cap quantity at both the [Range] upper limit and available stock.
+                var maxQuantity = Math.Min(999, product.QuantityInStock);
+                if (quantity > maxQuantity)
+                    return Json(new { success = false, message = "Only " + maxQuantity + " items available" });
+
+                var cart = _cartService.GetCart();
 
                 var cartItem = new CartItem
                 {
-                    CartItemId = GenerateCartItemId(),
+                    CartItemId = _cartService.GenerateCartItemId(),
                     ProductId = product.ProductId,
                     ProductName = product.ProductName,
                     Price = product.Price,
@@ -68,7 +74,7 @@ namespace SmartGear_Online.Controllers
                 };
 
                 cart.AddItem(cartItem);
-                SaveCart(cart);
+                _cartService.SaveCart(cart);
 
                 _logger.LogInformation(
                     "Product added to cart. Cart now has {ItemCount} items", cart.ItemCount);
@@ -84,13 +90,32 @@ namespace SmartGear_Online.Controllers
 
         // POST: /Cart/UpdateQuantity
         [HttpPost]
-        public IActionResult UpdateQuantity(int cartItemId, int quantity)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateQuantity(int cartItemId, int quantity)
         {
             try
             {
-                var cart = GetCart();
+                var cart = _cartService.GetCart();
+                var item = cart.Items.FirstOrDefault(i => i.CartItemId == cartItemId);
+
+                if (item == null)
+                    return Json(new { success = false, message = "Item not found in cart" });
+
+                if (quantity < 1)
+                    return Json(new { success = false, message = "Quantity must be at least 1" });
+
+                // Never allow a cart quantity above the live stock level.
+                var product = await _productRepository.GetProductByIdAsync(item.ProductId);
+                var maxQuantity = product == null ? 0 : Math.Min(999, product.QuantityInStock);
+
+                if (maxQuantity < 1)
+                    return Json(new { success = false, message = "Product is no longer available" });
+
+                if (quantity > maxQuantity)
+                    return Json(new { success = false, message = "Only " + maxQuantity + " items available" });
+
                 cart.UpdateQuantity(cartItemId, quantity);
-                SaveCart(cart);
+                _cartService.SaveCart(cart);
 
                 return Json(new { success = true, message = "Quantity updated" });
             }
@@ -103,13 +128,14 @@ namespace SmartGear_Online.Controllers
 
         // POST: /Cart/RemoveFromCart
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult RemoveFromCart(int cartItemId)
         {
             try
             {
-                var cart = GetCart();
+                var cart = _cartService.GetCart();
                 cart.RemoveItem(cartItemId);
-                SaveCart(cart);
+                _cartService.SaveCart(cart);
 
                 return Json(new { success = true, message = "Item removed from cart" });
             }
@@ -124,26 +150,30 @@ namespace SmartGear_Online.Controllers
         // FIX: discount codes are now validated server-side via IOrderService,
         // not against a hardcoded list in cart.js.
         [HttpPost]
-        public async Task<IActionResult> ApplyDiscount(string discountCode)
+        [ValidateAntiForgeryToken]
+        public IActionResult ApplyDiscount(string discountCode)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(discountCode))
                     return Json(new { success = false, message = "Please enter a discount code." });
 
-                var cart = GetCart();
+                if (discountCode.Length > 32)
+                    return Json(new { success = false, message = "Discount code is too long." });
+
+                var cart = _cartService.GetCart();
 
                 if (!cart.HasItems())
                     return Json(new { success = false, message = "Your cart is empty." });
 
-                var result = await _orderService.ApplyDiscountAsync(discountCode.Trim().ToUpper(), cart.Subtotal);
+                var result = _orderService.ApplyDiscount(discountCode.Trim().ToUpper(), cart.Subtotal);
 
                 if (!result.IsValid)
                     return Json(new { success = false, message = result.Message });
 
                 cart.DiscountCode = discountCode.Trim().ToUpper();
                 cart.DiscountAmount = result.DiscountAmount;
-                SaveCart(cart);
+                _cartService.SaveCart(cart);
 
                 return Json(new
                 {
@@ -164,32 +194,8 @@ namespace SmartGear_Online.Controllers
         [HttpGet]
         public IActionResult GetCartCount()
         {
-            var cart = GetCart();
+            var cart = _cartService.GetCart();
             return Json(cart.ItemCount);
-        }
-
-        // ------------------------------------------------
-        // Private helpers
-        // ------------------------------------------------
-        private ShoppingCart GetCart()
-        {
-            var cart = HttpContext.Session.GetObjectFromJson<ShoppingCart>(CartSessionKey);
-            if (cart == null)
-            {
-                cart = new ShoppingCart();
-                SaveCart(cart);
-            }
-            return cart;
-        }
-
-        private void SaveCart(ShoppingCart cart)
-        {
-            HttpContext.Session.SetObjectAsJson(CartSessionKey, cart);
-        }
-
-        private int GenerateCartItemId()
-        {
-            return Math.Abs(Guid.NewGuid().GetHashCode());
         }
     }
 }

@@ -57,6 +57,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 // ============================================================================
 
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
+        builder.Services.Configure<DiscountSettings>(builder.Configuration.GetSection("Discounts"));
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 
 // ============================================================================
 // QUESTION 10.4: COOKIE AUTHENTICATION
@@ -97,12 +99,15 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
+builder.Services.AddHostedService<EmailWorker>();
 builder.Services.AddScoped<LoggingActionFilter>();
 builder.Services.AddScoped<GlobalExceptionFilter>();
+builder.Services.AddHttpContextAccessor();
 
 // ============================================================================
 // PERFORMANCE &amp; REAL-TIME
@@ -124,6 +129,7 @@ builder.Services.AddResponseCaching();
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<GlobalExceptionFilter>();
+    options.Filters.Add<LoggingActionFilter>();
     options.CacheProfiles.Add("Default", new Microsoft.AspNetCore.Mvc.CacheProfile
     {
         Duration = 60,
@@ -232,6 +238,7 @@ app.MapControllerRoute(
 
 app.MapRazorPages();
 app.MapHub<ChatHub>("/chathub");
+app.MapHub<InventoryHub>("/inventoryhub");
 
 app.Run();
 

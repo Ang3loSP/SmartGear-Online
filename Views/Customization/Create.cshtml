@@ -37,7 +37,7 @@
 
                     <div class="mb-4 pb-4 border-bottom">
                         <p class="text-muted mb-2">Base Price</p>
-                        <h3 class="text-primary fw-bold">$<span id="displayPrice">@Model.Price.ToString("F2")</span></h3>
+                        <h3 class="text-primary fw-bold">R<span id="displayPrice">@Model.Price.ToString("F2")</span></h3>
                     </div>
 
                     <div class="bg-light p-3 rounded">
@@ -118,7 +118,7 @@
 
                         <!-- STEP 3: ADD CUSTOM TEXT -->
                         <div class="mb-4">
-                            <label class="form-label fw-bold"><i class="fas fa-font me-2"></i> Step 3: Add Custom Text</label>
+                            <label class="form-label fw-bold" for="customText"><i class="fas fa-font me-2" aria-hidden="true"></i> Step 3: Add Custom Text</label>
                             <p class="text-muted small">Add player names, team name, or any custom text (Optional)</p>
                             <div class="mb-3">
                                 <input type="text" class="form-control form-control-lg" id="customText" name="customText" placeholder="e.g., JOHN SMITH #23" maxlength="50" onchange="updatePreview()" oninput="updatePreview()">
@@ -144,9 +144,9 @@
 
                         <!-- PRICE SUMMARY -->
                         <div class="bg-light p-3 rounded mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2"><span>Unit Price:</span><span>$<span id="unitPrice">@Model.Price.ToString("F2")</span></span></div>
+                            <div class="d-flex justify-content-between align-items-center mb-2"><span>Unit Price:</span><span>R<span id="unitPrice">@Model.Price.ToString("F2")</span></span></div>
                             <div class="d-flex justify-content-between align-items-center mb-2"><span>Quantity:</span><span id="quantityDisplay">1</span></div>
-                            <div class="border-top pt-2 d-flex justify-content-between align-items-center"><strong>Total:</strong><h5 class="text-primary fw-bold mb-0">$<span id="totalPrice">@Model.Price.ToString("F2")</span></h5></div>
+                            <div class="border-top pt-2 d-flex justify-content-between align-items-center"><strong>Total:</strong><h5 class="text-primary fw-bold mb-0">R<span id="totalPrice">@Model.Price.ToString("F2")</span></h5></div>
                         </div>
 
                         <!-- ACTION BUTTONS -->

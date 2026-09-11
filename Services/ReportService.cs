@@ -42,14 +42,14 @@ namespace SmartGear_Online.Services
 
                 var cacheKey = $"SalesReport_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}";
 
-                if (_cache.TryGetValue(cacheKey, out SalesReport cachedReport))
+                if (_cache.TryGetValue(cacheKey, out SalesReport? cachedReport))
                 {
                     _logger.LogInformation("Returning cached sales report");
-                    return cachedReport;
+                    return cachedReport!;
                 }
 
                 var orders = await _context.Orders
-                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != "Cancelled")
+                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != OrderStatus.Cancelled)
                     .Include(o => o.OrderItems)
                     .ToListAsync();
 
@@ -64,7 +64,7 @@ namespace SmartGear_Online.Services
                 var prevEndDate = startDate.AddDays(-1);
 
                 var prevOrders = await _context.Orders
-                    .Where(o => o.OrderDate >= prevStartDate && o.OrderDate <= prevEndDate && o.Status != "Cancelled")
+                    .Where(o => o.OrderDate >= prevStartDate && o.OrderDate <= prevEndDate && o.Status != OrderStatus.Cancelled)
                     .ToListAsync();
 
                 var prevRevenue = prevOrders.Sum(o => o.TotalPrice);
@@ -122,7 +122,7 @@ namespace SmartGear_Online.Services
                 {
                     query = query.Where(x => x.o.OrderDate >= startDate.Value
                                           && x.o.OrderDate <= endDate.Value
-                                          && x.o.Status != "Cancelled");
+                                          && x.o.Status != OrderStatus.Cancelled);
                 }
 
                 var topProducts = await query
@@ -159,7 +159,7 @@ namespace SmartGear_Online.Services
                 _logger.LogInformation("Getting daily revenue from {StartDate} to {EndDate}", startDate, endDate);
 
                 var orders = await _context.Orders
-                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != "Cancelled")
+                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != OrderStatus.Cancelled)
                     .Include(o => o.OrderItems)
                     .ToListAsync();
 
@@ -210,7 +210,7 @@ namespace SmartGear_Online.Services
                 _logger.LogInformation("Getting revenue by category from {StartDate} to {EndDate}", startDate, endDate);
 
                 var totalRevenue = await _context.Orders
-                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != "Cancelled")
+                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != OrderStatus.Cancelled)
                     .SumAsync(o => o.TotalPrice);
 
                 var categoryRevenue = await (from oi in _context.OrderItems
@@ -218,7 +218,7 @@ namespace SmartGear_Online.Services
                                              join p in _context.Products on oi.ProductId equals p.ProductId
                                              where o.OrderDate >= startDate
                                                 && o.OrderDate <= endDate
-                                                && o.Status != "Cancelled"
+                                                && o.Status != OrderStatus.Cancelled
                                              group oi by p.Category into g
                                              select new CategoryRevenue
                                              {
@@ -254,14 +254,14 @@ namespace SmartGear_Online.Services
 
                 var cacheKey = "CustomerAnalytics";
 
-                if (_cache.TryGetValue(cacheKey, out CustomerAnalytics cachedAnalytics))
+                if (_cache.TryGetValue(cacheKey, out CustomerAnalytics? cachedAnalytics))
                 {
-                    return cachedAnalytics;
+                    return cachedAnalytics!;
                 }
 
                 var customers = await _context.Users.ToListAsync();
                 var orders = await _context.Orders
-                    .Where(o => o.Status != "Cancelled")
+                    .Where(o => o.Status != OrderStatus.Cancelled)
                     .ToListAsync();
 
                 var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
@@ -377,13 +377,13 @@ namespace SmartGear_Online.Services
 
                 var cacheKey = "OrderStatistics";
 
-                if (_cache.TryGetValue(cacheKey, out OrderStatistics cachedStats))
+                if (_cache.TryGetValue(cacheKey, out OrderStatistics? cachedStats))
                 {
-                    return cachedStats;
+                    return cachedStats!;
                 }
 
                 var orders = await _context.Orders
-                    .Where(o => o.Status != "Cancelled")
+                    .Where(o => o.Status != OrderStatus.Cancelled)
                     .ToListAsync();
 
                 var today = DateTime.UtcNow.Date;
@@ -392,12 +392,12 @@ namespace SmartGear_Online.Services
                 var stats = new OrderStatistics
                 {
                     TotalOrders = orders.Count,
-                    PendingOrders = orders.Count(o => o.Status == "Pending"),
-                    ConfirmedOrders = orders.Count(o => o.Status == "Confirmed"),
-                    ProductionOrders = orders.Count(o => o.Status == "In Production"),
-                    ShippedOrders = orders.Count(o => o.Status == "Shipped"),
-                    DeliveredOrders = orders.Count(o => o.Status == "Delivered"),
-                    CancelledOrders = await _context.Orders.CountAsync(o => o.Status == "Cancelled"),
+                    PendingOrders = orders.Count(o => o.Status == OrderStatus.Pending),
+                    ConfirmedOrders = orders.Count(o => o.Status == OrderStatus.Confirmed),
+                    ProductionOrders = orders.Count(o => o.Status == OrderStatus.InProduction),
+                    ShippedOrders = orders.Count(o => o.Status == OrderStatus.Shipped),
+                    DeliveredOrders = orders.Count(o => o.Status == OrderStatus.Delivered),
+                    CancelledOrders = await _context.Orders.CountAsync(o => o.Status == OrderStatus.Cancelled),
                     OrdersToday = orders.Count(o => o.OrderDate >= today && o.OrderDate < tomorrow),
                     RevenueToday = orders
                         .Where(o => o.OrderDate >= today && o.OrderDate < tomorrow)
@@ -417,7 +417,7 @@ namespace SmartGear_Online.Services
         // ================================================
         // Export Report to CSV
         // ================================================
-        public async Task<byte[]> ExportReportToCsvAsync(SalesReport report)
+        public Task<byte[]> ExportReportToCsvAsync(SalesReport report)
         {
             try
             {
@@ -431,39 +431,54 @@ namespace SmartGear_Online.Services
                 sb.AppendLine();
 
                 sb.AppendLine("Summary Metrics");
-                sb.AppendLine($"Total Revenue,${report.TotalRevenue:F2}");
-                sb.AppendLine($"Total Orders,{report.TotalOrders}");
-                sb.AppendLine($"Total Items Sold,{report.TotalItemsSold}");
-                sb.AppendLine($"Average Order Value,${report.AverageOrderValue:F2}");
-                sb.AppendLine($"Highest Order Value,${report.HighestOrderValue:F2}");
-                sb.AppendLine($"Revenue Change (vs previous),{report.RevenueChange:F1}%");
-                sb.AppendLine($"Orders Change (vs previous),{report.OrdersChange}%");
+                sb.AppendLine(JoinCsvRow("Total Revenue", $"R{report.TotalRevenue:F2}"));
+                sb.AppendLine(JoinCsvRow("Total Orders", report.TotalOrders.ToString()));
+                sb.AppendLine(JoinCsvRow("Total Items Sold", report.TotalItemsSold.ToString()));
+                sb.AppendLine(JoinCsvRow("Average Order Value", $"R{report.AverageOrderValue:F2}"));
+                sb.AppendLine(JoinCsvRow("Highest Order Value", $"R{report.HighestOrderValue:F2}"));
+                sb.AppendLine(JoinCsvRow("Revenue Change (vs previous)", $"{report.RevenueChange:F1}%"));
+                sb.AppendLine(JoinCsvRow("Orders Change (vs previous)", $"{report.OrdersChange}%"));
                 sb.AppendLine();
 
                 sb.AppendLine("Daily Breakdown");
-                sb.AppendLine("Date,Revenue,Orders,Items Sold");
+                sb.AppendLine(JoinCsvRow("Date", "Revenue", "Orders", "Items Sold"));
                 foreach (var day in report.DailyBreakdown)
                 {
-                    sb.AppendLine($"{day.Date:yyyy-MM-dd},{day.Revenue:F2},{day.OrderCount},{day.ItemsSold}");
+                    sb.AppendLine(JoinCsvRow(
+                        day.Date.ToString("yyyy-MM-dd"),
+                        day.Revenue.ToString("F2"),
+                        day.OrderCount.ToString(),
+                        day.ItemsSold.ToString()));
                 }
                 sb.AppendLine();
 
                 sb.AppendLine("Category Breakdown");
-                sb.AppendLine("Category,Revenue,Items Sold,Orders,% of Total");
+                sb.AppendLine(JoinCsvRow("Category", "Revenue", "Items Sold", "Orders", "% of Total"));
                 foreach (var cat in report.CategoryBreakdown)
                 {
-                    sb.AppendLine($"{cat.CategoryName},{cat.Revenue:F2},{cat.ItemsSold},{cat.OrderCount},{cat.PercentageOfTotal:F1}%");
+                    sb.AppendLine(JoinCsvRow(
+                        cat.CategoryName,
+                        cat.Revenue.ToString("F2"),
+                        cat.ItemsSold.ToString(),
+                        cat.OrderCount.ToString(),
+                        $"{cat.PercentageOfTotal:F1}%"));
                 }
                 sb.AppendLine();
 
                 sb.AppendLine("Top Products");
-                sb.AppendLine("Product ID,Product Name,Category,Quantity Sold,Revenue,Average Price");
+                sb.AppendLine(JoinCsvRow("Product ID", "Product Name", "Category", "Quantity Sold", "Revenue", "Average Price"));
                 foreach (var product in report.TopProducts)
                 {
-                    sb.AppendLine($"{product.ProductId},{product.ProductName},{product.Category},{product.QuantitySold},{product.Revenue:F2},{product.AveragePrice:F2}");
+                    sb.AppendLine(JoinCsvRow(
+                        product.ProductId.ToString(),
+                        product.ProductName,
+                        product.Category,
+                        product.QuantitySold.ToString(),
+                        product.Revenue.ToString("F2"),
+                        product.AveragePrice.ToString("F2")));
                 }
 
-                return Encoding.UTF8.GetBytes(sb.ToString());
+                return Task.FromResult(Encoding.UTF8.GetBytes(sb.ToString()));
             }
             catch (Exception ex)
             {
@@ -471,5 +486,43 @@ namespace SmartGear_Online.Services
                 throw;
             }
         }
+
+        // ================================================
+        // CSV Cell Escaping
+        // ================================================
+        /// <summary>
+        /// Escapes a single CSV cell: RFC-4180 quoting (double internal quotes,
+        /// wrap in quotes when the cell contains a delimiter/quote/newline) and
+        /// formula-injection protection — cells starting with = + - @ or a tab
+        /// get a leading apostrophe so they are never interpreted as an Excel
+        /// formula open.
+        /// </summary>
+        private static string EscapeCsvCell(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            if (value[0] == '=' || value[0] == '+' || value[0] == '-' ||
+                value[0] == '@' || value[0] == '\t' || value[0] == '\r')
+            {
+                value = "'" + value;
+            }
+
+            if (value.IndexOf(',') >= 0 ||
+                value.IndexOf('"') >= 0 ||
+                value.IndexOf('\n') >= 0 ||
+                value.IndexOf('\r') >= 0)
+            {
+                value = "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// Joins cells into a properly escaped CSV row.
+        /// </summary>
+        private static string JoinCsvRow(params string?[] cells)
+            => string.Join(",", cells.Select(EscapeCsvCell));
     }
 }

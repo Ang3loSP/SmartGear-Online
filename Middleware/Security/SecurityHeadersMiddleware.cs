@@ -28,7 +28,8 @@ namespace SmartGear_Online.Middleware
                 "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; " +
                 "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
-                "img-src 'self' data: https:;");
+                "img-src 'self' data: https:; " +
+                "connect-src 'self' ws: wss:;");
 
             await _next(context);
         }

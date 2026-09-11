@@ -6,12 +6,12 @@ namespace SmartGear_Online.Repositories
 {
     public interface IOrderRepository
     {
-        Task<Order> GetOrderByIdAsync(int id);
+        Task<Order?> GetOrderByIdAsync(int id);
         Task<List<Order>> GetCustomerOrdersAsync(string customerId);
         Task<int> CreateOrderAsync(Order order);
         Task UpdateOrderAsync(Order order);
         Task<bool> AddOrderItemAsync(OrderItem item);
-        Task<bool> UpdateOrderStatusAsync(int orderId, string newStatus);
+        Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus);
         Task<List<Order>> GetAllOrdersAsync();
     }
 }

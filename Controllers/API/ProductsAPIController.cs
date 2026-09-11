@@ -175,6 +175,15 @@ namespace SmartGear_Online.Controllers.API   // Fixed namespace
 
                 _logger.LogInformation("API: CreateProduct called - '{ProductName}'", product.ProductName);
 
+                if (await _productRepository.ProductNameExistsAsync(product.ProductName))
+                {
+                    return Conflict(new
+                    {
+                        Success = false,
+                        Message = "A product with this name already exists."
+                    });
+                }
+
                 await _productRepository.AddProductAsync(product);
 
                 return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, new
@@ -218,10 +227,20 @@ namespace SmartGear_Online.Controllers.API   // Fixed namespace
 
                 _logger.LogInformation("API: UpdateProduct called - ID {ProductId}", id);
 
-                var existingProduct = await _productRepository.GetProductByIdAsync(id);
+                var existingProduct = await _productRepository.GetProductByIdIncludingInactiveAsync(id);
                 if (existingProduct == null)
                 {
                     return NotFound(new { Success = false, Message = $"Product with ID {id} not found" });
+                }
+
+                if (await _productRepository.ProductNameExistsAsync(product.ProductName) &&
+                    !string.Equals(product.ProductName?.Trim(), existingProduct.ProductName?.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(new
+                    {
+                        Success = false,
+                        Message = "A product with this name already exists."
+                    });
                 }
 
                 // Preserve original created date
@@ -256,7 +275,7 @@ namespace SmartGear_Online.Controllers.API   // Fixed namespace
             {
                 _logger.LogInformation("API: DeleteProduct called - ID {ProductId}", id);
 
-                var product = await _productRepository.GetProductByIdAsync(id);
+                var product = await _productRepository.GetProductByIdIncludingInactiveAsync(id);
                 if (product == null)
                 {
                     return NotFound(new { Success = false, Message = $"Product with ID {id} not found" });

@@ -56,11 +56,11 @@
                     </div>
                     <div class="row">
                         <div class="col-sm-4"><strong>Total Spent:</strong></div>
-                        <div class="col-sm-8">$@Model.TotalSpent.ToString("F2")</div>
+                        <div class="col-sm-8">@("R" + Model.TotalSpent.ToString("F2"))</div>
                     </div>
                     <div class="row">
                         <div class="col-sm-4"><strong>Average Order:</strong></div>
-                        <div class="col-sm-8">$@Model.AverageOrderValue.ToString("F2")</div>
+                        <div class="col-sm-8">@("R" + Model.AverageOrderValue.ToString("F2"))</div>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SmartGear_Online.Data;
 using SmartGear_Online.Models;
-using SmartGear_Online.Repositories;
+using SmartGear_Online.Models.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,39 +17,40 @@ namespace SmartGear_Online.Services
     /// </summary>
     public class OrderService : IOrderService
     {
-        private readonly IProductRepository _productRepository;
-        private readonly IOrderRepository _orderRepository;
+        private readonly ApplicationDbContext _context;
         private readonly ILogger<OrderService> _logger;
         private readonly OrderSettings _orderSettings;
-
-        // Valid discount codes (in production, this would be in database)
-        private static readonly Dictionary<string, DiscountCode> _validDiscounts = new()
-        {
-            { "WELCOME10", new DiscountCode { Code = "WELCOME10", Type = "Percentage", Value = 10, IsActive = true } },
-            { "SAVE20", new DiscountCode { Code = "SAVE20", Type = "Percentage", Value = 20, IsActive = true } },
-            { "FREESHIP", new DiscountCode { Code = "FREESHIP", Type = "FreeShipping", Value = 0, IsActive = true } },
-            { "FLAT25", new DiscountCode { Code = "FLAT25", Type = "FixedAmount", Value = 25, IsActive = true } }
-        };
+        private readonly Dictionary<string, DiscountCode> _validDiscounts;
 
         public OrderService(
-            IProductRepository productRepository,
-            IOrderRepository orderRepository,
             ILogger<OrderService> logger,
-            IOptions<OrderSettings> orderSettings)
+            IOptions<OrderSettings> orderSettings,
+            IOptions<DiscountSettings> discountSettings,
+            ApplicationDbContext context)
         {
-            _productRepository = productRepository;
-            _orderRepository = orderRepository;
             _logger = logger;
             _orderSettings = orderSettings?.Value ?? new OrderSettings();
+            _context = context;
+
+            // Discount codes are loaded from configuration (see the
+            // "Discounts" section in appsettings.json) instead of being
+            // hard-coded here, so codes can change without a redeploy.
+            _validDiscounts = (discountSettings?.Value?.Codes ?? new List<DiscountCode>())
+                .Where(c => c != null && !string.IsNullOrWhiteSpace(c.Code))
+                .ToDictionary(c => c.Code!, StringComparer.OrdinalIgnoreCase);
         }
 
         // ================================================
         // QUESTION 5: Calculate Order Totals with Business Logic
+        // Single source of truth for totals — used by the checkout GET, the
+        // review summary and the actual order placement so they can never
+        // disagree. Subtotal uses the CURRENT database price of each product,
+        // never the session-snapshot price from the cart.
         // ================================================
         public async Task<OrderTotals> CalculateOrderTotalsAsync(
             List<CartItem> cartItems,
             string shippingMethod,
-            string discountCode = null)
+            string? discountCode = null)
         {
             try
             {
@@ -58,29 +61,37 @@ namespace SmartGear_Online.Services
                     return new OrderTotals { Subtotal = 0, GrandTotal = 0 };
                 }
 
-                // Calculate subtotal
-                var subtotal = cartItems.Sum(item => item.Quantity * item.Price);
+                // Current DB prices, not the (possibly stale) cart snapshot.
+                var productIds = cartItems.Select(i => i.ProductId).Distinct().ToList();
+                var prices = await _context.Products.AsNoTracking()
+                    .Where(p => productIds.Contains(p.ProductId))
+                    .ToDictionaryAsync(p => p.ProductId, p => p.Price);
+
+                decimal subtotal = 0;
+                foreach (var item in cartItems)
+                {
+                    if (prices.TryGetValue(item.ProductId, out var price))
+                        subtotal += item.Quantity * price;
+                }
 
                 // Calculate tax (configurable rate)
                 var taxRate = _orderSettings.TaxRate ?? 0.08m;
                 var taxAmount = subtotal * taxRate;
 
-                // Calculate shipping (free shipping over threshold)
+                // Shipping rule (matches the checkout UI): Express is a flat
+                // R15.00; Standard is free over the threshold, otherwise R5.99;
+                // the FREESHIP code makes shipping free regardless.
                 var freeShippingThreshold = _orderSettings.FreeShippingThreshold ?? 50;
-                var isFreeShipping = subtotal >= freeShippingThreshold ||
-                                    (discountCode == "FREESHIP");
+                var isExpress = string.Equals(shippingMethod, "Express", StringComparison.OrdinalIgnoreCase);
+                var isFreeShipping = !isExpress && subtotal >= freeShippingThreshold;
 
-                decimal shippingCost = 0;
-                if (!isFreeShipping)
-                {
-                    shippingCost = shippingMethod?.ToLower() == "express" ? 15.99m : 5.99m;
-                }
+                decimal discountAmount = 0;
+                var freeShippingDiscount = false;
 
                 // Apply discount if provided
-                decimal discountAmount = 0;
                 if (!string.IsNullOrEmpty(discountCode))
                 {
-                    var discountResult = await ApplyDiscountAsync(discountCode, subtotal);
+                    var discountResult = ApplyDiscount(discountCode, subtotal);
                     if (discountResult.IsValid)
                     {
                         discountAmount = discountResult.DiscountAmount;
@@ -88,11 +99,15 @@ namespace SmartGear_Online.Services
                         // If discount is free shipping, override shipping cost
                         if (discountResult.DiscountType == "FreeShipping")
                         {
-                            shippingCost = 0;
+                            freeShippingDiscount = true;
                             isFreeShipping = true;
                         }
                     }
                 }
+
+                var shippingCost = freeShippingDiscount || isFreeShipping
+                    ? 0m
+                    : (isExpress ? 15.00m : 5.99m);
 
                 var grandTotal = subtotal + taxAmount + shippingCost - discountAmount;
 
@@ -108,7 +123,7 @@ namespace SmartGear_Online.Services
                     DiscountAmount = discountAmount,
                     GrandTotal = grandTotal,
                     IsFreeShipping = isFreeShipping,
-                    Currency = "USD"
+                    Currency = "ZAR"
                 };
             }
             catch (Exception ex)
@@ -119,97 +134,13 @@ namespace SmartGear_Online.Services
         }
 
         // ================================================
-        // QUESTION 5: Validate Order Business Rules
-        // ================================================
-        public async Task<OrderValidationResult> ValidateOrderAsync(Order order, List<CartItem> cartItems)
-        {
-            var result = new OrderValidationResult { IsValid = true };
-
-            try
-            {
-                _logger.LogInformation("Validating order for customer {CustomerId}", order.CustomerId);
-
-                // Validate cart is not empty
-                if (cartItems == null || !cartItems.Any())
-                {
-                    result.IsValid = false;
-                    result.Errors.Add("Your cart is empty. Please add items before checking out.");
-                    return result;
-                }
-
-                // Validate each item has sufficient stock
-                foreach (var item in cartItems)
-                {
-                    var product = await _productRepository.GetProductByIdAsync(item.ProductId);
-
-                    if (product == null)
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add($"Product '{item.ProductName}' no longer exists.");
-                        continue;
-                    }
-
-                    if (!product.CanFulfillOrder(item.Quantity))
-                    {
-                        result.IsValid = false;
-                        result.Errors.Add($"Insufficient stock for '{product.ProductName}'. Available: {product.QuantityInStock}");
-                    }
-
-                    // Warning for low stock
-                    if (product.QuantityInStock <= product.ReorderLevel && product.QuantityInStock > 0)
-                    {
-                        result.Warnings.Add($"'{product.ProductName}' is running low on stock ({product.QuantityInStock} left). Order soon!");
-                    }
-                }
-
-                // Validate shipping address
-                if (string.IsNullOrWhiteSpace(order.ShippingAddress))
-                {
-                    result.IsValid = false;
-                    result.Errors.Add("Shipping address is required.");
-                }
-                else if (order.ShippingAddress.Length < 10)
-                {
-                    result.Warnings.Add("Please provide a complete shipping address for accurate delivery.");
-                }
-
-                // Validate total price is positive
-                if (order.TotalPrice <= 0)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add("Invalid order total. Please review your cart.");
-                }
-
-                // Validate maximum order value (business rule)
-                var maxOrderValue = _orderSettings.MaxOrderValue ?? 10000;
-                if (order.TotalPrice > maxOrderValue)
-                {
-                    result.IsValid = false;
-                    result.Errors.Add($"Order total exceeds maximum allowed value of ${maxOrderValue}. Please contact support for bulk orders.");
-                }
-
-                _logger.LogInformation("Order validation completed. IsValid={IsValid}, Errors={ErrorCount}, Warnings={WarningCount}",
-                    result.IsValid, result.Errors.Count, result.Warnings.Count);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating order");
-                result.IsValid = false;
-                result.Errors.Add("An error occurred while validating your order. Please try again.");
-                return result;
-            }
-        }
-
-        // ================================================
         // QUESTION 5: Process Payment (Simulated)
         // ================================================
         public async Task<PaymentResult> ProcessPaymentAsync(Order order, PaymentInfo paymentInfo)
         {
             try
             {
-                _logger.LogInformation("Processing payment for order {OrderId}, Amount: ${Amount}",
+                _logger.LogInformation("Processing payment for order {OrderId}, Amount: R{Amount}",
                     order.OrderId, order.TotalPrice);
 
                 // Simulate payment processing delay
@@ -218,7 +149,7 @@ namespace SmartGear_Online.Services
                 // In production, integrate with Stripe/PayPal/other payment gateway
                 // For demo purposes, we'll accept any valid card number format
 
-                if (string.IsNullOrWhiteSpace(paymentInfo.CardNumber) || paymentInfo.CardNumber.Length < 15)
+                if (string.IsNullOrWhiteSpace(paymentInfo.CardNumberLast4) || paymentInfo.CardNumberLast4.Length != 4)
                 {
                     return new PaymentResult
                     {
@@ -227,12 +158,12 @@ namespace SmartGear_Online.Services
                     };
                 }
 
-                if (string.IsNullOrWhiteSpace(paymentInfo.Cvv) || paymentInfo.Cvv.Length < 3)
+                if (string.IsNullOrWhiteSpace(paymentInfo.ExpiryMonth) || string.IsNullOrWhiteSpace(paymentInfo.ExpiryYear))
                 {
                     return new PaymentResult
                     {
                         Success = false,
-                        Message = "Invalid CVV code."
+                        Message = "Invalid card expiry date."
                     };
                 }
 
@@ -263,8 +194,10 @@ namespace SmartGear_Online.Services
 
         // ================================================
         // QUESTION 5: Apply Discount Code Business Logic
+        // Pure in-memory computation against a fixed discount set —
+        // synchronous by design (there is no async work to await).
         // ================================================
-        public async Task<DiscountResult> ApplyDiscountAsync(string discountCode, decimal subtotal)
+        public DiscountResult ApplyDiscount(string discountCode, decimal subtotal)
         {
             try
             {
@@ -275,11 +208,23 @@ namespace SmartGear_Online.Services
                     return new DiscountResult { IsValid = false, Message = "No discount code provided" };
                 }
 
+                if (discountCode.Length > 32)
+                {
+                    return new DiscountResult { IsValid = false, Message = "Discount code is too long" };
+                }
+
                 var code = discountCode.ToUpperInvariant().Trim();
 
                 if (!_validDiscounts.TryGetValue(code, out var discount) || !discount.IsActive)
                 {
                     _logger.LogWarning("Invalid or inactive discount code: {DiscountCode}", code);
+                    return new DiscountResult { IsValid = false, Message = "Invalid or expired discount code" };
+                }
+
+                // A past expiry date makes the code invalid even when active.
+                if (discount.ExpiryDate.HasValue && discount.ExpiryDate.Value < DateTime.UtcNow)
+                {
+                    _logger.LogWarning("Expired discount code: {DiscountCode}", code);
                     return new DiscountResult { IsValid = false, Message = "Invalid or expired discount code" };
                 }
 
@@ -308,14 +253,14 @@ namespace SmartGear_Online.Services
                         return new DiscountResult { IsValid = false, Message = "Invalid discount type" };
                 }
 
-                _logger.LogInformation("Discount applied: {DiscountCode} gave ${DiscountAmount} off", code, discountAmount);
+                _logger.LogInformation("Discount applied: {DiscountCode} gave R{DiscountAmount} off", code, discountAmount);
 
                 return new DiscountResult
                 {
                     IsValid = true,
                     DiscountAmount = discountAmount,
                     DiscountType = discount.Type,
-                    Message = $"Discount of ${discountAmount:F2} applied successfully!"
+                    Message = $"Discount of R{discountAmount:F2} applied successfully!"
                 };
             }
             catch (Exception ex)
@@ -326,218 +271,238 @@ namespace SmartGear_Online.Services
         }
 
         // ================================================
-        // Get Order Status History
+        // Place Order (transactional, server-authoritative)
         // ================================================
-        public async Task<List<OrderStatusHistory>> GetOrderStatusHistoryAsync(int orderId)
+        public async Task<int> PlaceOrderAsync(string customerId, ShoppingCart cart, CheckoutViewModel model)
         {
-            try
+            if (cart == null || !cart.HasItems())
+                throw new InvalidOperationException("Your cart is empty.");
+
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            // 1) Validate against the live database first (friendly errors,
+            //    no DB writes yet).
+            var productIds = cart.Items.Select(i => i.ProductId).Distinct().ToList();
+            var products = await _context.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.ProductId))
+                .ToDictionaryAsync(p => p.ProductId);
+
+            foreach (var item in cart.Items)
             {
-                _logger.LogInformation("Getting status history for order {OrderId}", orderId);
+                if (!products.TryGetValue(item.ProductId, out var product) || !product.IsActive)
+                    throw new InvalidOperationException($"Product '{item.ProductName}' is no longer available.");
 
-                var order = await _orderRepository.GetOrderByIdAsync(orderId);
-                if (order == null)
-                {
-                    return new List<OrderStatusHistory>();
-                }
-
-                // Build status timeline based on order dates
-                var history = new List<OrderStatusHistory>();
-
-                // Status display names mapping
-                var statusDisplayNames = new Dictionary<string, string>
-                {
-                    { "Pending", "Order Received" },
-                    { "Confirmed", "Order Confirmed" },
-                    { "In Production", "Being Customized" },
-                    { "Shipped", "Order Shipped" },
-                    { "Delivered", "Order Delivered" },
-                    { "Cancelled", "Order Cancelled" }
-                };
-
-                // Add status entries based on order progress
-                history.Add(new OrderStatusHistory
-                {
-                    OrderId = orderId,
-                    Status = "Pending",
-                    StatusDisplayName = "Order Received",
-                    ChangedAt = order.OrderDate,
-                    ChangedBy = "System",
-                    Notes = "Your order has been received and is awaiting confirmation."
-                });
-
-                // If order is confirmed or beyond, add confirmed entry
-                if (order.Status != "Pending")
-                {
-                    var confirmedDate = order.OrderDate.AddHours(2); // Simulated confirmation time
-                    history.Add(new OrderStatusHistory
-                    {
-                        OrderId = orderId,
-                        Status = "Confirmed",
-                        StatusDisplayName = "Order Confirmed",
-                        ChangedAt = confirmedDate,
-                        ChangedBy = "System",
-                        Notes = "Your order has been confirmed and is being prepared for production."
-                    });
-                }
-
-                // If order is in production or beyond
-                if (order.Status == "In Production" || order.Status == "Shipped" || order.Status == "Delivered")
-                {
-                    var productionDate = order.OrderDate.AddDays(1);
-                    history.Add(new OrderStatusHistory
-                    {
-                        OrderId = orderId,
-                        Status = "In Production",
-                        StatusDisplayName = "In Production",
-                        ChangedAt = productionDate,
-                        ChangedBy = "System",
-                        Notes = "Your custom items are being manufactured and personalized."
-                    });
-                }
-
-                // If order is shipped
-                if (order.Status == "Shipped" || order.Status == "Delivered")
-                {
-                    var shippedDate = order.OrderDate.AddDays(3);
-                    history.Add(new OrderStatusHistory
-                    {
-                        OrderId = orderId,
-                        Status = "Shipped",
-                        StatusDisplayName = "Order Shipped",
-                        ChangedAt = shippedDate,
-                        ChangedBy = "System",
-                        Notes = $"Your order has been shipped. Tracking number: {order.TrackingNumber ?? "pending"}"
-                    });
-                }
-
-                // If order is delivered
-                if (order.Status == "Delivered")
-                {
-                    var deliveredDate = order.OrderDate.AddDays(7);
-                    history.Add(new OrderStatusHistory
-                    {
-                        OrderId = orderId,
-                        Status = "Delivered",
-                        StatusDisplayName = "Order Delivered",
-                        ChangedAt = deliveredDate,
-                        ChangedBy = "System",
-                        Notes = "Your order has been delivered. Enjoy your custom gear!"
-                    });
-                }
-
-                return history;
+                if (item.Quantity < 1 || item.Quantity > product.QuantityInStock)
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for '{product.ProductName}'. Available: {product.QuantityInStock}");
             }
-            catch (Exception ex)
+
+            // 2) Simulated payment (runs BEFORE any DB writes so a rejected
+            //    card never creates an order row).
+            if (!ParseExpiry(model.ExpiryDate, out var expiryMonth, out var expiryYear))
+                throw new InvalidOperationException("Invalid card expiry date.");
+
+            var order = new Order
             {
-                _logger.LogError(ex, "Error getting status history for order {OrderId}", orderId);
-                return new List<OrderStatusHistory>();
+                CustomerId = customerId,
+                OrderDate = DateTime.UtcNow,
+                Status = OrderStatus.Pending,
+                ShippingAddress = model.GetShippingAddress(),
+                BillingAddress = model.GetBillingAddress(),
+                ShippingMethod = model.ShippingMethod
+            };
+
+            var totals = await CalculateOrderTotalsAsync(cart.Items, model.ShippingMethod, cart.DiscountCode);
+            order.TotalPrice = totals.GrandTotal;
+
+            if (!string.IsNullOrWhiteSpace(cart.DiscountCode))
+            {
+                order.DiscountCode = cart.DiscountCode.Trim().ToUpperInvariant();
+                order.DiscountAmount = totals.DiscountAmount;
             }
+
+            order.OrderItems = cart.Items.Select(item => new OrderItem
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                UnitPrice = products[item.ProductId].Price
+            }).ToList();
+
+            var paymentInfo = new PaymentInfo
+            {
+                CardNumberLast4 = model.CardNumberLast4,
+                ExpiryMonth = expiryMonth,
+                ExpiryYear = expiryYear,
+                CardHolderName = model.FullName
+            };
+            var payment = await ProcessPaymentAsync(order, paymentInfo);
+            if (!payment.Success)
+                throw new InvalidOperationException(payment.Message);
+
+            // 3) Single transaction: order + items + stock decrement.
+            //    Nothing persists until Commit succeeds.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+
+            foreach (var item in cart.Items)
+            {
+                // Atomic conditional decrement — no row read, no TOCTOU.
+                var released = await _context.Products
+                    .Where(p => p.ProductId == item.ProductId && p.QuantityInStock >= item.Quantity)
+                    .ExecuteUpdateAsync(p => p.SetProperty(
+                        x => x.QuantityInStock,
+                        x => x.QuantityInStock - item.Quantity));
+
+                if (released == 0)
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for '{item.ProductName}'. Please refresh your cart.");
+
+                _logger.LogInformation(
+                    "Reduced inventory for product {ProductId} by {Quantity}", item.ProductId, item.Quantity);
+            }
+
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Order {OrderId} placed by customer {CustomerId}", order.OrderId, customerId);
+            return order.OrderId;
         }
 
         // ================================================
-        // Generate Invoice PDF (Simulated)
+        // Update Status (transition guard + cancel stock restore)
         // ================================================
-        public async Task<byte[]> GenerateInvoicePdfAsync(int orderId)
+        public async Task<OrderStatusUpdateResult> UpdateStatusAsync(
+            int orderId, OrderStatus newStatus, string actorUserId)
         {
             try
             {
-                _logger.LogInformation("Generating invoice PDF for order {OrderId}", orderId);
+                var order = await _context.Orders
+                    .Include(o => o.OrderItems)
+                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
-                var order = await _orderRepository.GetOrderByIdAsync(orderId);
                 if (order == null)
-                {
-                    throw new ArgumentException($"Order {orderId} not found");
-                }
+                    return new OrderStatusUpdateResult { Success = false, Message = "Order not found" };
 
-                // In production, use a PDF generation library like iTextSharp or QuestPDF
-                // For demo, return a simulated byte array
-                await Task.Delay(100); // Simulate PDF generation
+                var current = order.Status;
 
-                // This would be actual PDF content in production
-                var simulatedPdf = System.Text.Encoding.UTF8.GetBytes($"SIMULATED_PDF_INVOICE_ORDER_{orderId}");
-
-                _logger.LogInformation("Invoice PDF generated for order {OrderId}", orderId);
-                return simulatedPdf;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating invoice PDF for order {OrderId}", orderId);
-                throw;
-            }
-        }
-
-        // ================================================
-        // Validate Customization Business Rules
-        // ================================================
-        public async Task<bool> ValidateCustomizationAsync(Customization customization)
-        {
-            try
-            {
-                _logger.LogInformation("Validating customization for product {ProductId}", customization.ProductId);
-
-                var product = await _productRepository.GetProductByIdAsync(customization.ProductId);
-                if (product == null)
-                {
-                    _logger.LogWarning("Product {ProductId} not found for customization", customization.ProductId);
-                    return false;
-                }
-
-                // Validate color is supported
-                var validColors = new[] { "Red", "Blue", "Green", "Yellow", "White", "Black", "Orange", "Purple", "Pink" };
-                if (!string.IsNullOrEmpty(customization.Color) && !validColors.Contains(customization.Color, StringComparer.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning("Invalid color {Color} selected for product {ProductId}", customization.Color, customization.ProductId);
-                    return false;
-                }
-
-                // Validate custom text length
-                if (!string.IsNullOrEmpty(customization.CustomText) && customization.CustomText.Length > 50)
-                {
-                    _logger.LogWarning("Custom text too long ({Length} chars) for product {ProductId}",
-                        customization.CustomText.Length, customization.ProductId);
-                    return false;
-                }
-
-                // Validate logo URL is valid (if provided)
-                if (!string.IsNullOrEmpty(customization.LogoImageUrl))
-                {
-                    var isValidUrl = Uri.TryCreate(customization.LogoImageUrl, UriKind.Absolute, out _);
-                    if (!isValidUrl)
+                // Idempotent update — accepted silently.
+                if (current == newStatus)
+                    return new OrderStatusUpdateResult
                     {
-                        _logger.LogWarning("Invalid logo URL for product {ProductId}", customization.ProductId);
-                        return false;
+                        Success = true,
+                        Message = "Order is already " + newStatus.ToDisplayString()
+                    };
+
+                // Terminal states cannot be changed.
+                if (current == OrderStatus.Delivered)
+                    return new OrderStatusUpdateResult
+                    {
+                        Success = false,
+                        Message = "Delivered orders cannot be changed"
+                    };
+
+                if (current == OrderStatus.Cancelled)
+                    return new OrderStatusUpdateResult
+                    {
+                        Success = false,
+                        Message = "Cancelled orders cannot be changed"
+                    };
+
+                // Stock restore only applies to cancelling orders in an
+                // cancellable state (Pending / Confirmed).
+                if (newStatus == OrderStatus.Cancelled && !order.CanBeCancelled())
+                    return new OrderStatusUpdateResult
+                    {
+                        Success = false,
+                        Message = "Order cannot be cancelled at this stage"
+                    };
+
+                // Any non-cancel transition must go forward in the rank
+                // (no backwards / regression).
+                if (newStatus != OrderStatus.Cancelled &&
+                    StatusRank(newStatus) <= StatusRank(current))
+                {
+                    return new OrderStatusUpdateResult
+                    {
+                        Success = false,
+                        Message = "Order status cannot move backwards"
+                    };
+                }
+
+                // One transaction: status + optional stock restore.
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                if (newStatus == OrderStatus.Cancelled)
+                {
+                    foreach (var item in order.OrderItems)
+                    {
+                        await _context.Products
+                            .Where(p => p.ProductId == item.ProductId)
+                            .ExecuteUpdateAsync(p => p.SetProperty(
+                                x => x.QuantityInStock,
+                                x => x.QuantityInStock + item.Quantity));
                     }
                 }
 
-                _logger.LogInformation("Customization validation passed for product {ProductId}", customization.ProductId);
-                return true;
+                order.Status = newStatus;
+                order.UpdatedDate = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                _logger.LogInformation(
+                    "Order {OrderId} status updated to {NewStatus} by {Actor}",
+                    orderId, newStatus, actorUserId);
+
+                return new OrderStatusUpdateResult
+                {
+                    Success = true,
+                    Message = "Order status updated to " + newStatus.ToDisplayString()
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating customization for product {ProductId}", customization.ProductId);
-                return false;
+                _logger.LogError(ex, "Error updating status for order {OrderId}", orderId);
+                return new OrderStatusUpdateResult
+                {
+                    Success = false,
+                    Message = "Failed to update order status"
+                };
             }
         }
-    }
 
-    // ================================================
-    // Supporting Classes
-    // ================================================
+        // ================================================
+        // Helpers
+        // ================================================
+        private static bool ParseExpiry(string? expiry, out string month, out string year)
+        {
+            month = string.Empty;
+            year = string.Empty;
 
-    public class DiscountCode
-    {
-        public string Code { get; set; }
-        public string Type { get; set; } // "Percentage", "FixedAmount", "FreeShipping"
-        public decimal Value { get; set; }
-        public bool IsActive { get; set; }
-        public DateTime? ExpiryDate { get; set; }
-    }
+            if (string.IsNullOrWhiteSpace(expiry)) return false;
 
-    public class OrderSettings
-    {
-        public decimal? TaxRate { get; set; } = 0.08m;
-        public decimal? FreeShippingThreshold { get; set; } = 50;
-        public decimal? MaxOrderValue { get; set; } = 10000;
-        public int? MaxItemsPerOrder { get; set; } = 50;
+            var parts = expiry.Split('/');
+            if (parts.Length != 2) return false;
+
+            month = parts[0].Trim();
+            year = parts[1].Trim();
+
+            return month.Length == 2 && year.Length == 2 &&
+                   int.TryParse(month, out var m) && m >= 1 && m <= 12 &&
+                   int.TryParse(year, out _);
+        }
+
+        private static int StatusRank(OrderStatus status) => status switch
+        {
+            OrderStatus.Pending => 0,
+            OrderStatus.Confirmed => 1,
+            OrderStatus.InProduction => 2,
+            OrderStatus.Shipped => 3,
+            OrderStatus.Delivered => 4,
+            OrderStatus.Cancelled => 5,
+            _ => -1
+        };
     }
 }

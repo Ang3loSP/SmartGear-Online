@@ -4,11 +4,25 @@ using System.Threading.Tasks;
 
 namespace SmartGear_Online.Hubs
 {
-    /// QUESTION 11: REAL-TIME INVENTORY UPDATES
-    /// Notifies admins when inventory changes
+    /// <summary>
+    /// Real-time inventory updates hub.
+    /// Notifies admins when inventory changes or stock is low.
+    /// </summary>
     [Authorize]
     public class InventoryHub : Hub
     {
+        public override async Task OnConnectedAsync()
+        {
+            var isAdmin = Context.User?.IsInRole("Admin") ?? false;
+
+            if (isAdmin)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+            }
+
+            await base.OnConnectedAsync();
+        }
+
         public async Task NotifyStockChange(int productId, string productName, int newQuantity)
         {
             await Clients.Group("Admins").SendAsync("StockUpdated", new
@@ -16,7 +30,7 @@ namespace SmartGear_Online.Hubs
                 ProductId = productId,
                 ProductName = productName,
                 NewQuantity = newQuantity,
-                Timestamp = System.DateTime.Now
+                Timestamp = System.DateTime.UtcNow
             });
         }
 
@@ -27,7 +41,7 @@ namespace SmartGear_Online.Hubs
                 ProductId = productId,
                 ProductName = productName,
                 CurrentStock = currentStock,
-                Timestamp = System.DateTime.Now
+                Timestamp = System.DateTime.UtcNow
             });
         }
     }

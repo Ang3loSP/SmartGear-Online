@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="~/css/cart.css" />
 
 <div class="container my-5">
+    @Html.AntiForgeryToken()
     <!-- Page Header -->
     <div class="mb-4">
         <h1 class="mb-2">Your Shopping Cart</h1>
@@ -93,7 +94,7 @@
 
                                         <!-- Price -->
                                         <td class="align-middle">
-                                            <span class="fw-bold">$@item.Price.ToString("F2")</span>
+                                            <span class="fw-bold">@("R" + item.Price.ToString("F2"))</span>
                                         </td>
 
                                         <!-- Quantity Controls -->
@@ -117,7 +118,7 @@
                                         <!-- Line Total -->
                                         <td class="align-middle">
                                             <span class="fw-bold text-primary">
-                                                $<span class="line-total">@((item.Quantity * item.Price).ToString("F2"))</span>
+                                                R<span class="line-total">@((item.Quantity * item.Price).ToString("F2"))</span>
                                             </span>
                                         </td>
 
@@ -156,7 +157,7 @@
                         <!-- Subtotal -->
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal:</span>
-                            <span id="subtotal">$0.00</span>
+                            <span id="subtotal">R0.00</span>
                         </div>
 
                         <!-- Shipping -->
@@ -169,20 +170,20 @@
                         <div class="d-flex justify-content-between mb-3 pb-3 border-bottom"
                              id="discountRow" style="display: none;">
                             <span>Discount:</span>
-                            <span id="discountAmount" class="text-success">-$0.00</span>
+                            <span id="discountAmount" class="text-success">-R0.00</span>
                         </div>
 
                         <!-- Tax -->
                         <div class="d-flex justify-content-between mb-3">
                             <span>Tax (8%):</span>
-                            <span id="tax">$0.00</span>
+                            <span id="tax">R0.00</span>
                         </div>
 
                         <!-- Total -->
                         <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-top pt-3">
                             <strong class="fs-5">Total:</strong>
                             <h5 class="text-primary fw-bold mb-0">
-                                $<span id="total">0.00</span>
+                                R<span id="total">0.00</span>
                             </h5>
                         </div>
 

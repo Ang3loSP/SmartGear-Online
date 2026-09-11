@@ -236,3 +236,18 @@ $('body').append('<button id="backToTop" class="btn btn-primary rounded-circle" 
 $('#backToTop').click(function () {
     $('html, body').animate({ scrollTop: 0 }, 500);
 });
+
+// ================================================
+// Navbar — glass intensifies once you scroll
+// ================================================
+
+(function () {
+    var nav = document.querySelector('.site-nav');
+    if (!nav) return;
+
+    var glue = function () {
+        nav.classList.toggle('glass-solid', window.scrollY > 8);
+    };
+    glue();
+    window.addEventListener('scroll', glue, { passive: true });
+})();

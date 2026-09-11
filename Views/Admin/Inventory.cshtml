@@ -1,7 +1,9 @@
 ﻿@model List<Product>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
     ViewData["Title"] = "Inventory Management";
+    var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 }
 
 <div class="container-fluid my-5">
@@ -33,7 +35,7 @@
                             <td>@product.ProductId</td>
                             <td><strong>@product.ProductName</strong></td>
                             <td>@product.Category</td>
-                            <td>$@product.Price.ToString("F2")</td>
+                            <td>@("R" + product.Price.ToString("F2"))</td>
                             <td>
                                 @product.QuantityInStock
                                 @if (product.QuantityInStock <= product.ReorderLevel)
@@ -71,7 +73,10 @@
     <script>
         function deleteProduct(id) {
             if (confirm('Are you sure you want to delete this product?')) {
-                fetch(`/Admin/DeleteProduct/${id}`, { method: 'POST' })
+                fetch(`/Admin/DeleteProduct/${id}`, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': '@antiforgeryToken' }
+                })
                     .then(() => location.reload());
             }
         }

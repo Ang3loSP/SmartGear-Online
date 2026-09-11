@@ -79,14 +79,15 @@ namespace SmartGear_Online.Models.ViewModels
         public string CustomerName { get; set; } = string.Empty;
         public DateTime OrderDate { get; set; }
         public decimal TotalPrice { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public string StatusBadgeClass => Status switch
         {
-            "Pending" => "bg-warning",
-            "Confirmed" => "bg-info",
-            "In Production" => "bg-primary",
-            "Shipped" => "bg-success",
-            "Delivered" => "bg-secondary",
+            OrderStatus.Pending => "bg-warning",
+            OrderStatus.Confirmed => "bg-info",
+            OrderStatus.InProduction => "bg-primary",
+            OrderStatus.Shipped => "bg-success",
+            OrderStatus.Delivered => "bg-secondary",
+            OrderStatus.Cancelled => "bg-danger",
             _ => "bg-dark"
         };
     }

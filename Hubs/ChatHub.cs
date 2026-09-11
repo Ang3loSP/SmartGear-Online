@@ -40,7 +40,7 @@ namespace SmartGear_Online.Hubs
 
             _connectedUsers[Context.ConnectionId] = new UserConnection
             {
-                UserId = userId,
+                UserId = userId ?? string.Empty,
                 UserName = userName,
                 ConnectionId = Context.ConnectionId,
                 IsAdmin = isAdmin,
@@ -125,7 +125,7 @@ namespace SmartGear_Online.Hubs
                 Message = message,
                 Timestamp = DateTime.Now.ToString("HH:mm:ss"),
                 IsAdmin = isAdmin,
-                UserId = userId
+                UserId = userId ?? string.Empty
             };
 
             await Clients.All.SendAsync("ReceiveMessage", messageData);
@@ -142,6 +142,8 @@ namespace SmartGear_Online.Hubs
                 return;
 
             var userId = Context.UserIdentifier;
+            if (userId == null)
+                return;
 
             if (isTyping)
             {
@@ -188,7 +190,7 @@ namespace SmartGear_Online.Hubs
                     Timestamp = DateTime.Now.ToString("HH:mm:ss"),
                     IsAdmin = isAdmin,
                     IsPrivate = true,
-                    UserId = Context.UserIdentifier
+                    UserId = Context.UserIdentifier ?? string.Empty
                 };
 
                 await Clients.Client(targetConnection.ConnectionId)

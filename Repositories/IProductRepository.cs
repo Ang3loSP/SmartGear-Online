@@ -10,12 +10,44 @@ namespace SmartGear_Online.Repositories
     public interface IProductRepository
     {
         Task<List<Product>> GetProductsAsync(int page, int pageSize);
-        Task<Product> GetProductByIdAsync(int id);
+
+        /// <summary>
+        /// Returns an active (not soft-deleted) product, or null. Used for
+        /// public-facing flows so deactivated products can no longer be
+        /// added to carts or ordered.
+        /// </summary>
+        Task<Product?> GetProductByIdAsync(int id);
+
+        /// <summary>
+        /// Returns a product even if it has been soft-deleted (IsActive =
+        /// false). Intended for admin edit/management paths only.
+        /// </summary>
+        Task<Product?> GetProductByIdIncludingInactiveAsync(int id);
+
+        /// <summary>
+        /// True if any product already uses this name (case-insensitive match
+        /// under SQL Server collation). Used to give duplicate-name submissions
+        /// a friendly validation error instead of a 500.
+        /// </summary>
+        Task<bool> ProductNameExistsAsync(string name);
+
         Task<List<Product>> SearchProductsAsync(string query);
         Task<List<Product>> GetProductsByCategoryAsync(string category);
         Task AddProductAsync(Product product);
         Task UpdateProductAsync(Product product);
         Task DeleteProductAsync(int id);
+
+        /// <summary>
+        /// Atomically decrements stock with an "only if the row genuinely has
+        /// enough stock" guard (WHERE QuantityInStock >= quantity). Returns
+        /// true only when a row was actually decremented, eliminating
+        /// read-then-write oversell races.
+        /// </summary>
         Task<bool> ReduceInventoryAsync(int productId, int quantity);
+
+        /// <summary>
+        /// Atomically restores stock (used when an order is cancelled).
+        /// </summary>
+        Task<int> ReplenishInventoryAsync(int productId, int quantity);
     }
 }

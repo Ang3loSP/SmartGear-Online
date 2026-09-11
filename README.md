@@ -22,7 +22,8 @@ The platform supports product browsing, session-based cart management, order pro
 | ORM | Entity Framework Core 8 (code-first migrations) |
 | Auth | ASP.NET Core Identity (roles: Admin, Customer) |
 | Real-Time | SignalR (chat & inventory hubs) |
-| Testing | Not yet implemented |
+| Email | SMTP via MailKit (`NotificationService`; logs locally when unconfigured) |
+| Testing | xUnit + Moq (`SmartGearOnline.Tests`, 31 passing) |
 | Caching | In-memory cache + response caching |
 | Cloud | Microsoft Azure |
 | Dev Tools | Visual Studio 2022, SSMS, Git |
@@ -41,7 +42,7 @@ The platform supports product browsing, session-based cart management, order pro
 - **Real-Time Chat** — SignalR-powered live chat hub
 - **Security** — CSRF protection, security headers middleware, account lockout & cookie hardening
 - **Reporting** — sales reports, revenue breakdowns & inventory status
-- **Testing** — not yet implemented (no automated tests in this project; previously referenced `xUnit`/`Moq` packages were removed from the .csproj as they were unused dead weight)
+- **Testing** — 31 automated xUnit/Moq tests (all passing) covering cart totals, discount-code validation, order status transitions & transactional integrity
 
 ---
 
@@ -49,7 +50,7 @@ The platform supports product browsing, session-based cart management, order pro
 
 - **Pattern:** MVC (Model-View-Controller) with Repository & Service layers
 - **Repository Pattern:** `IProductRepository`, `IOrderRepository`, `ICartRepository` — data access abstracted from controllers
-- **Service Layer:** `IOrderService`, `INotificationService`, `IReportService` — business logic isolated from controllers
+- **Service Layer:** `IOrderService`, `ICartService`, `INotificationService`, `IReportService` — business logic isolated from controllers; outbound emails are queued on a bounded channel (`EmailQueue`) and drained off the request path by a background worker (`EmailWorker`)
 - **Middleware:** Custom request logging middleware & security headers middleware
 - **Filters:** Global exception filter & logging action filter
 - **Database:** Relational schema with EF Core code-first migrations & seed data
@@ -123,6 +124,20 @@ read from .NET user-secrets — **the password is never stored in source control
 
    > Alternatively open `SmartGear Online.sln` in Visual Studio & press **F5**.
 
+6. **(Optional) Enable real email delivery**
+
+   Order confirmations & status-update emails are sent over SMTP (MailKit) once
+   the `Email` section is populated — set via user-secrets so credentials never
+   reach source control:
+   ```bash
+   dotnet user-secrets set "Email:Host" "smtp.yourprovider.com"
+   dotnet user-secrets set "Email:Port" "587"
+   dotnet user-secrets set "Email:UserName" "you@yourprovider.com"
+   dotnet user-secrets set "Email:Password" "your-smtp-password"
+   ```
+   With `Email:Host` empty (the default), notifications are logged instead of
+   sent, so the app works locally with no mail server.
+
 ---
 
 ## 📁 Project Structure
@@ -158,7 +173,6 @@ SmartGear Online/
 │   ├── CartItem.cs
 │   ├── Category.cs
 │   ├── Customization.cs
-│   ├── Inventory.cs
 │   ├── Order.cs
 │   ├── OrderItem.cs
 │   ├── Product.cs
@@ -168,6 +182,7 @@ SmartGear Online/
 ├── Views/                    # Razor views (.cshtml)
 ├── wwwroot/                  # Static assets (CSS, JS, lib)
 ├── appsettings.json
+├── SmartGearOnline.Tests/    # xUnit + Moq test project (31 passing tests)
 └── Program.cs
 ```
 
@@ -175,15 +190,23 @@ SmartGear Online/
 
 ## 🧪 Testing
 
-> **Status: in progress.** The project references `xUnit` and `Moq` in
-> `SmartGear Online.csproj`, but a dedicated test project has not been added
-> yet. Planned coverage includes cart total calculations, discount code
-> validation, and order status transitions.
+Automated tests live in `SmartGearOnline.Tests` (net8.0, xUnit + Moq) and run
+EF Core against an in-memory SQLite database — no SQL Server needed.
 
-Once test files are added, run:
+Coverage:
+- **Order placement** — totals persist, stock is decremented, overselling / inactive
+  products / empty carts are rejected, and nothing is persisted on failure
+- **Discount codes** — percentage & fixed amounts, free shipping, expiry,
+  case-insensitivity, and out-of-range caps
+- **Order status transitions** — forward-only state machine, cancellation restores
+  stock in the same transaction, delivered is terminal
+- **Totals** — uses the current database price, shipping tiers, and tax
+
+Run the full suite with:
 ```bash
-dotnet test
+dotnet test SmartGearOnline.Tests
 ```
+All **31 tests pass** (`Failed: 0`).
 
 ---
 
@@ -214,6 +237,14 @@ The following bugs were identified & resolved during development:
 | 13 | `AddProduct`/`EditProduct` links in Inventory pointed to missing views/actions | Added `AddProduct.cshtml`; `EditProduct` now redirects to the existing `Product/Edit` |
 | 14 | Homepage contact modal had no working Send button | Added `HomeController.ContactAjax` JSON endpoint + fetch() wiring |
 | 15 | Dead `SearchSuggestions` AJAX call (404 on every keystroke) | Added the missing controller action with debounced client-side calls |
+| 16 | Cart badge was tallied client-side | Added AJAX `Cart/GetCartCount` endpoint as the single authoritative source |
+| 17 | Response cache wasn't invalidated after product/stock CRUD | Cache versioning busted whenever underlying data changes |
+| 18 | Discount codes hardcoded in the service | Moved to configuration (appsettings / user secrets) |
+| 19 | Emails fire-and-forgot from the request path | Bounded `EmailQueue` channel + background `EmailWorker` — ordered, no silent loss |
+| 20 | Prices presented as USD | Full ZAR (Rand) conversion across server, views & client-side JS |
+| 21 | Razor's email heuristic rendered `R@price` as literal text | Rewritten as explicit `@("R" + ...)` expressions (22 spots) plus other literal-leak fixes |
+| 22 | Unused `Inventory` model & dead code | Removed |
+| 23 | Mixed-OS look & missing focus affordances | Dark liquid-glass UI restyle + accessibility pass (skip link, `:focus-visible` rings, ARIA labelling, contrast)
 
 > **Note on product images:** the images referenced in seed data and views
 > (`/images/products/*.jpg`, `/images/hero-bg-stadium.jpg`) currently ship as

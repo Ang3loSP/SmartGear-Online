@@ -24,10 +24,14 @@
             <form asp-controller="Account" asp-action="Login" method="post" asp-route-returnurl="@ViewData["ReturnUrl"]">
                 @Html.AntiForgeryToken()
 
-                @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+                @{
+                    var loginErrors = ViewData.ModelState[string.Empty]?.Errors;
+                }
+
+                @if (loginErrors != null && loginErrors.Count > 0)
                 {
                     <div class="alert alert-danger">
-                        @foreach (var error in ViewData.ModelState[string.Empty].Errors)
+                        @foreach (var error in loginErrors)
                         {
                             <p class="mb-0">@error.ErrorMessage</p>
                         }

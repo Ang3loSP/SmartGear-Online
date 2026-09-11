@@ -17,7 +17,7 @@ namespace SmartGear_Online.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.27")
+                .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -214,7 +214,8 @@ namespace SmartGear_Online.Migrations
 
                     b.Property<string>("ProfilePictureUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -262,6 +263,9 @@ namespace SmartGear_Online.Migrations
 
                     b.HasKey("CategoryId");
 
+                    b.HasIndex("CategoryName")
+                        .IsUnique();
+
                     b.ToTable("Categories");
 
                     b.HasData(
@@ -270,28 +274,28 @@ namespace SmartGear_Online.Migrations
                             CategoryId = 1,
                             CategoryName = "Jerseys",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Team jerseys &amp; uniforms"
+                            Description = "Team jerseys & uniforms"
                         },
                         new
                         {
                             CategoryId = 2,
                             CategoryName = "Shoes",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Athletic &amp; sports shoes"
+                            Description = "Athletic & sports shoes"
                         },
                         new
                         {
                             CategoryId = 3,
                             CategoryName = "Gear",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Sports equipment &amp; accessories"
+                            Description = "Sports equipment & accessories"
                         },
                         new
                         {
                             CategoryId = 4,
                             CategoryName = "Hats",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Caps, beanies &amp; hats"
+                            Description = "Caps, beanies & hats"
                         });
                 });
 
@@ -331,36 +335,6 @@ namespace SmartGear_Online.Migrations
                     b.ToTable("Customizations");
                 });
 
-            modelBuilder.Entity("SmartGear_Online.Models.Inventory", b =>
-                {
-                    b.Property<int>("InventoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryId"));
-
-                    b.Property<DateTime>("LastRestockedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QuantityInStock")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReorderLevel")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("InventoryId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("Inventory");
-                });
-
             modelBuilder.Entity("SmartGear_Online.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
@@ -377,6 +351,14 @@ namespace SmartGear_Online.Migrations
                     b.Property<string>("CustomerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DiscountCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -401,7 +383,6 @@ namespace SmartGear_Online.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TrackingNumber")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -416,7 +397,10 @@ namespace SmartGear_Online.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", t =>
+                        {
+                            t.HasCheckConstraint("CK_Orders_TotalPrice_NonNegative", "[TotalPrice] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("SmartGear_Online.Models.OrderItem", b =>
@@ -446,7 +430,12 @@ namespace SmartGear_Online.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_OrderItems_Quantity_Positive", "[Quantity] >= 1");
+
+                            t.HasCheckConstraint("CK_OrderItems_UnitPrice_Positive", "[UnitPrice] > 0");
+                        });
                 });
 
             modelBuilder.Entity("SmartGear_Online.Models.Product", b =>
@@ -473,7 +462,8 @@ namespace SmartGear_Online.Migrations
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -503,7 +493,14 @@ namespace SmartGear_Online.Migrations
                     b.HasIndex("ProductName")
                         .IsUnique();
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_Price_Positive", "[Price] > 0");
+
+                            t.HasCheckConstraint("CK_Products_QuantityInStock_NonNegative", "[QuantityInStock] >= 0");
+
+                            t.HasCheckConstraint("CK_Products_ReorderLevel_NonNegative", "[ReorderLevel] >= 0");
+                        });
 
                     b.HasData(
                         new
@@ -511,7 +508,7 @@ namespace SmartGear_Online.Migrations
                             ProductId = 1,
                             Category = "Jerseys",
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "High-quality custom team jersey with name &amp; number",
+                            Description = "High-quality custom team jersey with name & number",
                             ImageUrl = "/images/products/jersey1.jpg",
                             IsActive = true,
                             Price = 89.99m,
@@ -593,17 +590,6 @@ namespace SmartGear_Online.Migrations
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("SmartGear_Online.Models.Inventory", b =>
-                {
-                    b.HasOne("SmartGear_Online.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Product");

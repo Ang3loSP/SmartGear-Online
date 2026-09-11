@@ -103,7 +103,7 @@ namespace SmartGear_Online.Models
             return Items != null && Items.Any();
         }
 
-        public CartItem GetItem(int productId, int? customizationId = null)
+        public CartItem? GetItem(int productId, int? customizationId = null)
         {
             return Items.FirstOrDefault(i =>
                 i.ProductId == productId &&

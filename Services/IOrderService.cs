@@ -1,4 +1,5 @@
 ﻿using SmartGear_Online.Models;
+using SmartGear_Online.Models.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -17,11 +18,6 @@ namespace SmartGear_Online.Services
         Task<OrderTotals> CalculateOrderTotalsAsync(List<CartItem> cartItems, string shippingMethod, string? discountCode = null);
 
         /// <summary>
-        /// Validate order before submission
-        /// </summary>
-        Task<OrderValidationResult> ValidateOrderAsync(Order order, List<CartItem> cartItems);
-
-        /// <summary>
         /// Process order payment (simulated)
         /// </summary>
         Task<PaymentResult> ProcessPaymentAsync(Order order, PaymentInfo paymentInfo);
@@ -29,22 +25,32 @@ namespace SmartGear_Online.Services
         /// <summary>
         /// Apply discount code to order
         /// </summary>
-        Task<DiscountResult> ApplyDiscountAsync(string discountCode, decimal subtotal);
+        DiscountResult ApplyDiscount(string discountCode, decimal subtotal);
 
         /// <summary>
-        /// Get order status history with timestamps
+        /// Places an order from the session cart in a single transaction:
+        /// re-validates products/stock against the database, computes totals and
+        /// unit prices server-side (never trusting posted totals), runs the
+        /// simulated payment, atomically decrements stock, and clears nothing
+        /// until commit succeeds.
         /// </summary>
-        Task<List<OrderStatusHistory>> GetOrderStatusHistoryAsync(int orderId);
+        Task<int> PlaceOrderAsync(string customerId, ShoppingCart cart, CheckoutViewModel model);
 
         /// <summary>
-        /// Generate order invoice as PDF (simulated)
+        /// Applies an order status change with a transition guard (no backwards
+        /// moves, no reviving cancelled/delivered orders). When the new status is
+        /// Cancelled, inventory is restored inside the same transaction.
         /// </summary>
-        Task<byte[]> GenerateInvoicePdfAsync(int orderId);
+        Task<OrderStatusUpdateResult> UpdateStatusAsync(int orderId, OrderStatus newStatus, string actorUserId);
+    }
 
-        /// <summary>
-        /// Check if product customization is valid
-        /// </summary>
-        Task<bool> ValidateCustomizationAsync(Customization customization);
+    /// <summary>
+    /// DTO for the result of an order status update.
+    /// </summary>
+    public class OrderStatusUpdateResult
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -59,17 +65,7 @@ namespace SmartGear_Online.Services
         public decimal DiscountAmount { get; set; }
         public decimal GrandTotal { get; set; }
         public bool IsFreeShipping { get; set; }
-        public string Currency { get; set; } = "USD";
-    }
-
-    /// <summary>
-    /// DTO for order validation result
-    /// </summary>
-    public class OrderValidationResult
-    {
-        public bool IsValid { get; set; }
-        public List<string> Errors { get; set; } = new List<string>();
-        public List<string> Warnings { get; set; } = new List<string>();
+        public string Currency { get; set; } = "ZAR";
     }
 
     /// <summary>
@@ -95,28 +91,15 @@ namespace SmartGear_Online.Services
     }
 
     /// <summary>
-    /// DTO for order status history
-    /// </summary>
-    public class OrderStatusHistory
-    {
-        public int HistoryId { get; set; }
-        public int OrderId { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string StatusDisplayName { get; set; } = string.Empty;
-        public DateTime ChangedAt { get; set; }
-        public string ChangedBy { get; set; } = string.Empty;
-        public string Notes { get; set; } = string.Empty;
-    }
-
-    /// <summary>
-    /// DTO for payment information
+    /// DTO for payment information.
+    /// SECURITY: only the last four digits of the card are ever collected —
+    /// the full PAN and CVV are never bound, stored or logged.
     /// </summary>
     public class PaymentInfo
     {
-        public string CardNumber { get; set; } = string.Empty;
+        public string CardNumberLast4 { get; set; } = string.Empty;
         public string ExpiryMonth { get; set; } = string.Empty;
         public string ExpiryYear { get; set; } = string.Empty;
-        public string Cvv { get; set; } = string.Empty;
         public string CardHolderName { get; set; } = string.Empty;
         public string PaymentMethod { get; set; } = "CreditCard";
     }

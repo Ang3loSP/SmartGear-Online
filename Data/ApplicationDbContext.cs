@@ -26,7 +26,6 @@ namespace SmartGear_Online.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<Customization> Customizations { get; set; }
-        public DbSet<Inventory> Inventory { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -56,14 +55,16 @@ namespace SmartGear_Online.Data
                 .HasForeignKey(c => c.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<Inventory>()
-                .HasOne(i => i.Product)
-                .WithMany()
-                .HasForeignKey(i => i.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Category>()
+                .HasIndex(c => c.CategoryName)
+                .IsUnique();
 
             builder.Entity<Order>()
                 .Property(o => o.TotalPrice)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Order>()
+                .Property(o => o.DiscountAmount)
                 .HasPrecision(18, 2);
 
             builder.Entity<OrderItem>()
@@ -85,10 +86,35 @@ namespace SmartGear_Online.Data
                 .HasIndex(o => o.CustomerId);
 
             builder.Entity<Order>()
+                .Property(o => o.Status)
+                .HasConversion(OrderStatusConverter.Instance)
+                .HasMaxLength(50);
+
+            builder.Entity<Order>()
                 .HasIndex(o => o.Status);
 
             builder.Entity<Order>()
                 .HasIndex(o => o.OrderDate);
+
+            // ================================================
+            // DB-LEVEL CHECK CONSTRAINTS
+            // These back up the [Range] attributes so that rows can
+            // never be inserted/updated outside application validation.
+            // ================================================
+            builder.Entity<Product>()
+                .ToTable(t => t.HasCheckConstraint("CK_Products_Price_Positive", "[Price] > 0"));
+            builder.Entity<Product>()
+                .ToTable(t => t.HasCheckConstraint("CK_Products_QuantityInStock_NonNegative", "[QuantityInStock] >= 0"));
+            builder.Entity<Product>()
+                .ToTable(t => t.HasCheckConstraint("CK_Products_ReorderLevel_NonNegative", "[ReorderLevel] >= 0"));
+
+            builder.Entity<OrderItem>()
+                .ToTable(t => t.HasCheckConstraint("CK_OrderItems_Quantity_Positive", "[Quantity] >= 1"));
+            builder.Entity<OrderItem>()
+                .ToTable(t => t.HasCheckConstraint("CK_OrderItems_UnitPrice_Positive", "[UnitPrice] > 0"));
+
+            builder.Entity<Order>()
+                .ToTable(t => t.HasCheckConstraint("CK_Orders_TotalPrice_NonNegative", "[TotalPrice] >= 0"));
 
             SeedData(builder);
         }
@@ -100,28 +126,28 @@ namespace SmartGear_Online.Data
                 {
                     CategoryId = 1,
                     CategoryName = "Jerseys",
-                    Description = "Team jerseys &amp; uniforms",
+                    Description = "Team jerseys & uniforms",
                     CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 2,
                     CategoryName = "Shoes",
-                    Description = "Athletic &amp; sports shoes",
+                    Description = "Athletic & sports shoes",
                     CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 3,
                     CategoryName = "Gear",
-                    Description = "Sports equipment &amp; accessories",
+                    Description = "Sports equipment & accessories",
                     CreatedDate = SeedDate
                 },
                 new Category
                 {
                     CategoryId = 4,
                     CategoryName = "Hats",
-                    Description = "Caps, beanies &amp; hats",
+                    Description = "Caps, beanies & hats",
                     CreatedDate = SeedDate
                 }
             );
@@ -133,7 +159,7 @@ namespace SmartGear_Online.Data
                     ProductName = "Nike Custom Jersey 2024",
                     Category = "Jerseys",
                     Price = 89.99m,
-                    Description = "High-quality custom team jersey with name &amp; number",
+                    Description = "High-quality custom team jersey with name & number",
                     ImageUrl = "/images/products/jersey1.jpg",
                     QuantityInStock = 50,
                     ReorderLevel = 10,

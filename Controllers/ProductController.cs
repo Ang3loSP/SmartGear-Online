@@ -203,6 +203,15 @@ namespace SmartGear_Online.Controllers
                     return View(product);
                 }
 
+                // DATA INTEGRITY: friendly duplicate-name check instead of a 500
+                // from the unique index.
+                if (await _productRepository.ProductNameExistsAsync(product.ProductName))
+                {
+                    ModelState.AddModelError("ProductName",
+                        "A product with this name already exists. Choose a different name.");
+                    return View(product);
+                }
+
                 _logger.LogInformation(
                     "ProductController.Create() POST: Creating product {ProductName}",
                     product.ProductName);
@@ -234,7 +243,8 @@ namespace SmartGear_Online.Controllers
             {
                 _logger.LogInformation("ProductController.Edit() GET called with id={ProductId}", id);
 
-                var product = await _productRepository.GetProductByIdAsync(id);
+                // Admin edit path: must be able to open soft-deleted products too.
+                var product = await _productRepository.GetProductByIdIncludingInactiveAsync(id);
 
                 if (product == null)
                     return NotFound("Product not found");
@@ -268,6 +278,25 @@ namespace SmartGear_Online.Controllers
                     _logger.LogWarning("ProductController.Edit() POST: Invalid model state");
                     return View(product);
                 }
+
+                // DATA INTEGRITY: reload the existing row so we can (a) confirm it
+                // still exists, (b) preserve CreatedDate (the edit form doesn't
+                // carry it, so full-entity binding would silently reset it to now),
+                // and (c) reject renames that collide with an existing product.
+                var existing = await _productRepository.GetProductByIdIncludingInactiveAsync(id);
+
+                if (existing == null)
+                    return NotFound("Product not found");
+
+                var nameExists = await _productRepository.ProductNameExistsAsync(product.ProductName);
+                if (nameExists && !string.Equals(product.ProductName.Trim(), existing.ProductName.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError("ProductName",
+                        "A product with this name already exists. Choose a different name.");
+                    return View(product);
+                }
+
+                product.CreatedDate = existing.CreatedDate;
 
                 _logger.LogInformation(
                     "ProductController.Edit() POST: Updating product {ProductId}",
@@ -303,7 +332,7 @@ namespace SmartGear_Online.Controllers
                     "ProductController.Delete() called with id={ProductId}",
                     id);
 
-                var product = await _productRepository.GetProductByIdAsync(id);
+                var product = await _productRepository.GetProductByIdIncludingInactiveAsync(id);
 
                 if (product == null)
                     return NotFound("Product not found");

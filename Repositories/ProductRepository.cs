@@ -31,8 +31,20 @@ namespace SmartGear_Online.Repositories
         private readonly IMemoryCache _cache;
 
         // Cache keys
-        private const string AllProductsCacheKey = "AllProducts";
         private const string CategoriesCacheKey = "ProductCategories";
+
+        // FIX: generation-stamped listing keys. Search/Category/AllProducts
+        // results are cached as lists; IMemoryCache can't enumerate keys, so
+        // "let them expire naturally" meant admin edits kept serving stale
+        // browse/search results for up to 30 minutes. Bumping the version on
+        // every write atomically orphans every prior list entry — the old
+        // generation's entries simply age out by size. Individual product
+        // keys (Product_{id}) are still cleared explicitly.
+        private int _productCacheVersion;
+
+        private string AllProductsCacheKey => $"AllProducts_{_productCacheVersion}";
+        private string SearchCacheKey(string lowerQuery) => $"Search_{_productCacheVersion}_{lowerQuery}";
+        private string CategoryCacheKey(string lowerCategory) => $"Category_{_productCacheVersion}_{lowerCategory}";
 
         // Cache expiration times
         private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(30);
@@ -62,7 +74,7 @@ namespace SmartGear_Online.Repositories
                 _logger.LogInformation("ProductRepository.GetProductsAsync() called");
 
                 // Try to get ALL products from cache first
-                if (!_cache.TryGetValue(AllProductsCacheKey, out List<Product> cachedProducts))
+                if (!_cache.TryGetValue(AllProductsCacheKey, out List<Product>? cachedProducts))
                 {
                     _logger.LogInformation("Cache MISS - Fetching products from database");
 
@@ -93,7 +105,7 @@ namespace SmartGear_Online.Repositories
                 }
 
                 // Apply pagination AFTER retrieving from cache
-                var pagedProducts = cachedProducts
+                var pagedProducts = cachedProducts!
                     .Skip((page - 1) * pageSize)
                     .Take(pageSize)
                     .ToList();
@@ -111,7 +123,7 @@ namespace SmartGear_Online.Repositories
         /// QUESTION 11.2: GetProductByIdAsync with caching
         /// Individual products are cached for 30 minutes
         /// </summary>
-        public async Task<Product> GetProductByIdAsync(int id)
+        public async Task<Product?> GetProductByIdAsync(int id)
         {
             try
             {
@@ -120,17 +132,24 @@ namespace SmartGear_Online.Repositories
                 var cacheKey = $"Product_{id}";
 
                 // Try to get from cache first
-                if (_cache.TryGetValue(cacheKey, out Product cachedProduct))
+                if (_cache.TryGetValue(cacheKey, out Product? cachedProduct))
                 {
                     _logger.LogInformation("Cache HIT - Product {ProductId} from cache", id);
-                    return cachedProduct;
+
+                    // DATA INTEGRITY: never return a soft-deleted product from a
+                    // public read-path cache entry either.
+                    if (cachedProduct != null && cachedProduct.IsActive)
+                        return cachedProduct;
+
+                    _cache.Remove(cacheKey);
                 }
 
                 _logger.LogInformation("Cache MISS - Product {ProductId} from database", id);
 
-                // Cache miss - get from database
+                // Cache miss - get active product only (soft-deleted products are
+                // invisible to public flows, so they can't be ordered any more).
                 var product = await _context.Products
-                    .FirstOrDefaultAsync(p => p.ProductId == id);
+                    .FirstOrDefaultAsync(p => p.ProductId == id && p.IsActive);
 
                 if (product != null)
                 {
@@ -153,6 +172,49 @@ namespace SmartGear_Online.Repositories
         }
 
         /// <summary>
+        /// DATA INTEGRITY: reads a product including soft-deleted ones.
+        /// For admin edit/management paths only — public flows must use
+        /// <see cref="GetProductByIdAsync"/> so deactivated products can never
+        /// be ordered from a stale link or cart.
+        /// </summary>
+        public async Task<Product?> GetProductByIdIncludingInactiveAsync(int id)
+        {
+            try
+            {
+                // Deliberately uncached: admin edits must always see the live row.
+                return await _context.Products
+                    .FirstOrDefaultAsync(p => p.ProductId == id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving product by ID (including inactive)");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// True if any product already uses this name (SQL Server default
+        /// collation is case-insensitive).
+        /// </summary>
+        public async Task<bool> ProductNameExistsAsync(string name)
+        {
+            try
+            {
+                var trimmed = name?.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                    return false;
+
+                return await _context.Products
+                    .AnyAsync(p => p.ProductName == trimmed);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking product name existence");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// QUESTION 11.2: SearchProductsAsync with caching for frequent searches
         /// Search results are cached for 5 minutes
         /// </summary>
@@ -165,13 +227,13 @@ namespace SmartGear_Online.Repositories
                 if (string.IsNullOrWhiteSpace(query))
                     return new List<Product>();
 
-                var cacheKey = $"Search_{query.ToLower().Trim()}";
+                var cacheKey = SearchCacheKey(query.ToLowerInvariant().Trim());
 
                 // Try to get search results from cache
-                if (_cache.TryGetValue(cacheKey, out List<Product> cachedResults))
+                if (_cache.TryGetValue(cacheKey, out List<Product>? cachedResults))
                 {
                     _logger.LogInformation("Cache HIT - Search results for '{Query}' from cache", query);
-                    return cachedResults;
+                    return cachedResults!;
                 }
 
                 _logger.LogInformation("Cache MISS - Searching database for '{Query}'", query);
@@ -211,13 +273,13 @@ namespace SmartGear_Online.Repositories
             {
                 _logger.LogInformation("ProductRepository.GetProductsByCategoryAsync({Category}) called", category);
 
-                var cacheKey = $"Category_{category.ToLower()}";
+                var cacheKey = CategoryCacheKey(category.ToLowerInvariant());
 
                 // Try to get from cache
-                if (_cache.TryGetValue(cacheKey, out List<Product> cachedProducts))
+                if (_cache.TryGetValue(cacheKey, out List<Product>? cachedProducts))
                 {
                     _logger.LogInformation("Cache HIT - Category '{Category}' from cache", category);
-                    return cachedProducts;
+                    return cachedProducts!;
                 }
 
                 _logger.LogInformation("Cache MISS - Fetching category '{Category}' from database", category);
@@ -357,7 +419,10 @@ namespace SmartGear_Online.Repositories
 
         /// <summary>
         /// QUESTION 11.2: ReduceInventoryAsync with cache invalidation
-        /// Clears product cache when inventory changes
+        /// Clears product cache when inventory changes.
+        /// DATA INTEGRITY: now an atomic conditional UPDATE — stock is only
+        /// decremented when the row genuinely has enough, so concurrent
+        /// checkouts cannot oversell.
         /// </summary>
         public async Task<bool> ReduceInventoryAsync(int productId, int quantity)
         {
@@ -365,29 +430,63 @@ namespace SmartGear_Online.Repositories
             {
                 _logger.LogInformation("ProductRepository.ReduceInventoryAsync({ProductId}, {Quantity})", productId, quantity);
 
-                var product = await _context.Products
-                    .FirstOrDefaultAsync(p => p.ProductId == productId);
-
-                if (product == null)
-                    throw new KeyNotFoundException("Product not found");
-
-                if (!product.CanFulfillOrder(quantity))
+                if (quantity <= 0)
                     return false;
 
-                product.ReduceInventory(quantity);
-                _context.Products.Update(product);
-                await _context.SaveChangesAsync();
+                var updated = await _context.Products
+                    .Where(p => p.ProductId == productId && p.QuantityInStock >= quantity)
+                    .ExecuteUpdateAsync(p => p.SetProperty(
+                        x => x.QuantityInStock,
+                        x => x.QuantityInStock - quantity));
 
-                // QUESTION 11.2: Invalidate specific product cache when inventory changes
-                InvalidateProductCache(productId);
+                if (updated > 0)
+                {
+                    // FIX: stock is surfaced on the browse/search/category
+                    // listings, so an inventory change must invalidate the
+                    // listing caches as well as the single-product entry.
+                    InvalidateProductCaches();
+                    InvalidateProductCache(productId);
+                }
 
-                _logger.LogInformation("Inventory reduced for Product {ProductId}. Cache invalidated.", productId);
-
-                return true;
+                return updated > 0;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error reducing inventory");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// DATA INTEGRITY: atomically restores stock (order cancellation).
+        /// Returns the number of rows updated.
+        /// </summary>
+        public async Task<int> ReplenishInventoryAsync(int productId, int quantity)
+        {
+            try
+            {
+                _logger.LogInformation("ProductRepository.ReplenishInventoryAsync({ProductId}, {Quantity})", productId, quantity);
+
+                if (quantity <= 0)
+                    return 0;
+
+                var updated = await _context.Products
+                    .Where(p => p.ProductId == productId)
+                    .ExecuteUpdateAsync(p => p.SetProperty(
+                        x => x.QuantityInStock,
+                        x => x.QuantityInStock + quantity));
+
+                if (updated > 0)
+                {
+                    InvalidateProductCaches();
+                    InvalidateProductCache(productId);
+                }
+
+                return updated;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error replenishing inventory");
                 throw;
             }
         }
@@ -402,16 +501,17 @@ namespace SmartGear_Online.Repositories
         /// </summary>
         private void InvalidateProductCaches()
         {
-            _logger.LogInformation("Invalidating all product caches");
+            // Bump the generation stamp: every active list key (all products,
+            // search, category) becomes unreachable, so the next request hits
+            // the database. No need to enumerate and remove each key.
+            _logger.LogInformation(
+                "Invalidating product listing caches (version {Version} -> {NewVersion})",
+                _productCacheVersion, _productCacheVersion + 1);
 
-            // Remove the main products cache
-            _cache.Remove(AllProductsCacheKey);
+            _productCacheVersion++;
 
-            // Remove categories cache
+            // Navigational category list still uses a fixed key, clear it directly.
             _cache.Remove(CategoriesCacheKey);
-
-            // Note: For category-specific caches, we'd need to track them
-            // For simplicity, we'll let them expire naturally
         }
 
         /// <summary>
@@ -423,55 +523,6 @@ namespace SmartGear_Online.Repositories
             var cacheKey = $"Product_{productId}";
             _cache.Remove(cacheKey);
             _logger.LogInformation("Invalidated cache for Product {ProductId}", productId);
-        }
-
-        // =====================================================
-        // QUESTION 11.2: CACHE MANAGEMENT METHODS
-        // =====================================================
-
-        /// <summary>
-        /// Manually refresh the product cache
-        /// Can be called by admin to force cache refresh
-        /// </summary>
-        public async Task RefreshProductCacheAsync()
-        {
-            _logger.LogInformation("Manually refreshing product cache");
-
-            // Invalidate existing cache
-            InvalidateProductCaches();
-
-            // Force reload from database on next request
-            _cache.Remove(AllProductsCacheKey);
-
-            // Preload cache with fresh data
-            var products = await _context.Products
-                .Where(p => p.IsActive)
-                .OrderBy(p => p.ProductName)
-                .ToListAsync();
-
-            var cacheOptions = new MemoryCacheEntryOptions()
-                .SetSlidingExpiration(CacheExpiration)
-                .SetAbsoluteExpiration(TimeSpan.FromHours(1));
-
-            _cache.Set(AllProductsCacheKey, products, cacheOptions);
-
-            _logger.LogInformation("Product cache refreshed. Count: {Count}", products.Count);
-        }
-
-        /// <summary>
-        /// Gets cache statistics for monitoring
-        /// </summary>
-        public Dictionary<string, object> GetCacheStatistics()
-        {
-            var stats = new Dictionary<string, object>
-            {
-                { "AllProductsCached", _cache.TryGetValue(AllProductsCacheKey, out _) },
-                { "CategoriesCached", _cache.TryGetValue(CategoriesCacheKey, out _) },
-                { "CacheExpirationMinutes", CacheExpiration.TotalMinutes },
-                { "ShortCacheExpirationMinutes", ShortCacheExpiration.TotalMinutes }
-            };
-
-            return stats;
         }
     }
 }

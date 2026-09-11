@@ -84,9 +84,10 @@ namespace SmartGear_Online.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Contact(string name, string email, string subject, string message)
         {
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(message))
+            var validationError = ValidateContactInput(name, email, subject, message);
+            if (validationError != null)
             {
-                TempData["Error"] = "Please fill in all required fields.";
+                TempData["Error"] = validationError;
                 return View();
             }
 
@@ -108,14 +109,56 @@ namespace SmartGear_Online.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ContactAjax(string name, string email, string subject, string message)
         {
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(message))
+            var validationError = ValidateContactInput(name, email, subject, message);
+            if (validationError != null)
             {
-                return Json(new { success = false, message = "Please fill in all required fields." });
+                return Json(new { success = false, message = validationError });
             }
 
             _logger.LogInformation("Contact modal submitted by {Name} ({Email}): {Subject}", name, email, subject);
 
             return Json(new { success = true, message = "Thank you for contacting us. We'll get back to you soon!" });
+        }
+
+        /// <summary>
+        /// Common input validation for the contact forms — prevents log bloat /
+        /// oversized payloads being written to the server logs.
+        /// </summary>
+        private static string? ValidateContactInput(string? name, string? email, string? subject, string? message)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(message))
+                return "Please fill in all required fields.";
+
+            if (name.Trim().Length > 100)
+                return "Name must be 100 characters or fewer.";
+
+            if (email.Trim().Length > 100)
+                return "Email must be 100 characters or fewer.";
+
+            if (subject?.Trim().Length > 200)
+                return "Subject must be 200 characters or fewer.";
+
+            if (message.Trim().Length > 2000)
+                return "Message must be 2000 characters or fewer.";
+
+            if (!IsValidEmail(email.Trim()))
+                return "Please enter a valid email address.";
+
+            return null;
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            try
+            {
+                if (email.Length < 3 || email.Length > 100) return false;
+                return email.Contains('@') &&
+                       new System.Net.Mail.MailAddress(email).Address == email;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="SmartGear Online - Custom Sports Equipment Ordering Platform">
+    <meta name="theme-color" content="#0a1226">
     <title>SmartGear Online - @ViewData["Title"]</title>
 
     <!-- Bootstrap CSS (stable 5.3.3) -->
@@ -12,8 +13,10 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: body + display + metadata voices -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css">
@@ -21,11 +24,15 @@
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
+    <!-- Skip link: lets keyboard / screen-reader users jump straight to the
+         page content instead of tabbing through the site navigation. -->
+    <a class="skip-link visually-hidden-focusable" href="#main-content">Skip to main content</a>
+
     <!-- Navigation Bar -->
     @await Html.PartialAsync("_Navigation")
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main id="main-content" class="main-content" tabindex="-1">
         @RenderBody()
     </main>
 

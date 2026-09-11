@@ -21,7 +21,7 @@ namespace SmartGear_Online.Repositories
             _logger = logger;
         }
 
-        public async Task<Order> GetOrderByIdAsync(int id)
+        public async Task<Order?> GetOrderByIdAsync(int id)
         {
             try
             {
@@ -129,7 +129,7 @@ namespace SmartGear_Online.Repositories
             }
         }
 
-        public async Task<bool> UpdateOrderStatusAsync(int orderId, string newStatus)
+        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
         {
             try
             {

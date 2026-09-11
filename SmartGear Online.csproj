@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-SmartGear_Online-09625f59-dd0b-448e-9257-7e53d2b0cb15</UserSecretsId>
     <RootNamespace>SmartGear_Online</RootNamespace>
+    <!-- The SDK globs **/*.cs recursively, which would pull the xUnit test
+         project (a nested folder) into this web project's compile items.
+         Exclude it so the main app doesn't try to compile test code. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);SmartGearOnline.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +17,7 @@
          major version, can trigger a NuGet downgrade warning/restore failure
          on a clean machine (e.g. a fresh Azure/CI build agent) even when it
          happens to restore locally because packages were already cached. -->
+    <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
@@ -32,9 +37,10 @@
        - Microsoft.EntityFrameworkCore.InMemory: never referenced (AddDbContext
          only ever calls UseSqlServer).
        - Microsoft.NET.Test.Sdk / Moq / xunit / xunit.runner.visualstudio:
-         there are no test files in this project (README correctly states no
-         automated tests exist yet) - these pulled in the entire VSTest
-         toolchain for nothing, bloating restore time and publish output. -->
+         automated tests now live in the SmartGearOnline.Tests project (excluded
+         from this web project's compile items above). Keeping the VSTest
+         toolchain out of this project avoids bloating restore time and the
+         publish output. -->
 
   <ItemGroup>
     <Folder Include="wwwroot\images\" />

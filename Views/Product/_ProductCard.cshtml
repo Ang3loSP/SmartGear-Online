@@ -14,7 +14,7 @@
         <div class="col-md-6">
             <span class="badge bg-secondary mb-2">@Model.Category</span>
             <h1 class="mb-3">@Model.ProductName</h1>
-            <h3 class="text-primary mb-3">$@Model.Price.ToString("F2")</h3>
+            <h3 class="text-primary mb-3">@("R" + Model.Price.ToString("F2"))</h3>
 
             @if (Model.QuantityInStock > 0)
             {

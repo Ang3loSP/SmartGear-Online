@@ -5,6 +5,7 @@
 *@
 
 @using SmartGear_Online.Models.ViewModels
+@using System.Text.Json
 @model AdminDashboardViewModel
 
 @{
@@ -36,7 +37,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted small">Total Revenue</p>
-                            <h3 class="text-primary fw-bold mb-0">$@Model.TotalRevenue.ToString("F2")</h3>
+                            <h3 class="text-primary fw-bold mb-0">@("R" + Model.TotalRevenue.ToString("F2"))</h3>
                         </div>
                         <i class="fas fa-dollar-sign fa-3x text-primary opacity-50"></i>
                     </div>
@@ -81,7 +82,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted small">Avg. Order Value</p>
-                            <h3 class="text-info fw-bold mb-0">$@Model.AverageOrderValue.ToString("F2")</h3>
+                            <h3 class="text-info fw-bold mb-0">@("R" + Model.AverageOrderValue.ToString("F2"))</h3>
                         </div>
                         <i class="fas fa-chart-line fa-3x text-info opacity-50"></i>
                     </div>
@@ -142,11 +143,11 @@
                     <h5 class="mb-0"><i class="fas fa-list me-2"></i> Orders by Status</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-warning">Pending:</span><span class="fw-bold">12</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-info">Confirmed:</span><span class="fw-bold">28</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-primary">In Production:</span><span class="fw-bold">45</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-success">Shipped:</span><span class="fw-bold">87</span></div>
-                    <div class="d-flex justify-content-between"><span class="badge bg-secondary">Delivered:</span><span class="fw-bold">1062</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-warning">Pending:</span><span class="fw-bold">@Model.PendingOrders</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-info">Confirmed:</span><span class="fw-bold">@Model.ConfirmedOrders</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-primary">In Production:</span><span class="fw-bold">@Model.ProductionOrders</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span class="badge bg-success">Shipped:</span><span class="fw-bold">@Model.ShippedOrders</span></div>
+                    <div class="d-flex justify-content-between"><span class="badge bg-secondary">Delivered:</span><span class="fw-bold">@Model.DeliveredOrders</span></div>
                 </div>
             </div>
         </div>
@@ -165,11 +166,19 @@
                             <tr><th>Product</th><th>Units</th><th>Revenue</th><th>Trend</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td><strong>Nike Custom Jersey</strong><br><small>Jerseys</small></td><td>342</td><td>$30,478.58</td><td class="text-success"><i class="fas fa-arrow-up me-1"></i>15%</td></tr>
-                            <tr><td><strong>Adidas Soccer Shoe</strong><br><small>Shoes</small></td><td>256</td><td>$33,150.44</td><td class="text-success"><i class="fas fa-arrow-up me-1"></i>8%</td></tr>
-                            <tr><td><strong>Team Training Gear</strong><br><small>Gear</small></td><td>187</td><td>$37,313.00</td><td class="text-warning"><i class="fas fa-arrow-down me-1"></i>3%</td></tr>
-                            <tr><td><strong>Warm-up Jacket</strong><br><small>Apparel</small></td><td>98</td><td>$4,508.02</td><td class="text-success"><i class="fas fa-arrow-up me-1"></i>5%</td></tr>
-                            <tr><td><strong>Cotton Socks (6-pack)</strong><br><small>Accessories</small></td><td>412</td><td>$2,048.00</td><td class="text-warning"><i class="fas fa-arrow-down me-1"></i>2%</td></tr>
+                            @foreach (var product in Model.TopProducts)
+                            {
+                                <tr>
+                                    <td><strong>@product.ProductName</strong><br><small>@product.Category</small></td>
+                                    <td>@product.UnitsSold</td>
+                                    <td>@("R" + product.Revenue.ToString("F2"))</td>
+                                    <td class="text-@product.TrendColor"><i class="fas fa-@product.TrendIcon me-1"></i>@product.Trend.ToString("F0")%</td>
+                                </tr>
+                            }
+                            @if (!Model.TopProducts.Any())
+                            {
+                                <tr><td colspan="4" class="text-muted text-center py-3">No sales data yet.</td></tr>
+                            }
                         </tbody>
                     </table>
                 </div>
@@ -183,22 +192,20 @@
                     <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Low Stock Alerts</h5>
                 </div>
                 <div class="list-group list-group-flush">
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><h6 class="mb-1">Team Hat - Red</h6><small class="text-muted">Only 6 units remaining</small></div>
-                        <button class="btn btn-sm btn-danger">REORDER</button>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><h6 class="mb-1">Warm-up Jacket - Blue</h6><small class="text-muted">Only 3 units remaining</small></div>
-                        <button class="btn btn-sm btn-danger">REORDER</button>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><h6 class="mb-1">Custom Logo Patch</h6><small class="text-muted">Only 12 units remaining</small></div>
-                        <button class="btn btn-sm btn-warning">LOW STOCK</button>
-                    </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><h6 class="mb-1">Size XL Blank Jersey</h6><small class="text-muted">Only 8 units remaining</small></div>
-                        <button class="btn btn-sm btn-warning">LOW STOCK</button>
-                    </div>
+                    @foreach (var item in Model.LowStockAlerts)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">@item.ProductName</h6>
+                                <small class="text-muted">Only @item.CurrentStock units remaining (reorder at @item.ReorderLevel)</small>
+                            </div>
+                            <a asp-controller="Admin" asp-action="Inventory" class="btn btn-sm @(item.AlertLevel == "Critical" ? "btn-danger" : "btn-warning")">REORDER</a>
+                        </div>
+                    }
+                    @if (!Model.LowStockAlerts.Any())
+                    {
+                        <div class="list-group-item text-muted">All products are above their reorder levels.</div>
+                    }
                 </div>
             </div>
         </div>
@@ -214,8 +221,8 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-2"><a href="#" class="btn btn-outline-primary w-100"><i class="fas fa-chart-bar me-2"></i>View Reports</a></div>
-                        <div class="col-md-3 mb-2"><a asp-action="InventoryManagement" asp-controller="Admin" class="btn btn-outline-primary w-100"><i class="fas fa-box me-2"></i>Manage Inventory</a></div>
-                        <div class="col-md-3 mb-2"><a href="#" class="btn btn-outline-primary w-100"><i class="fas fa-plus me-2"></i>Add Product</a></div>
+                        <div class="col-md-3 mb-2"><a asp-action="Inventory" asp-controller="Admin" class="btn btn-outline-primary w-100"><i class="fas fa-box me-2"></i>Manage Inventory</a></div>
+                        <div class="col-md-3 mb-2"><a asp-action="AddProduct" asp-controller="Admin" class="btn btn-outline-primary w-100"><i class="fas fa-plus me-2"></i>Add Product</a></div>
                         <div class="col-md-3 mb-2"><a href="#" class="btn btn-outline-primary w-100"><i class="fas fa-users me-2"></i>View Customers</a></div>
                     </div>
                 </div>
@@ -226,5 +233,8 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        window.__dailyRevenue = @Html.Raw(JsonSerializer.Serialize(Model.DailyRevenue.Select(d => new { d.DateLabel, d.Revenue, d.OrderCount })));
+    </script>
     <script src="~/js/admin-dashboard.js"></script>
 }

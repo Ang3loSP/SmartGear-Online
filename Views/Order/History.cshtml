@@ -28,20 +28,22 @@
                             <tr>
                                 <td class="fw-bold">#@order.OrderId</td>
                                 <td>@order.OrderDate.ToString("MMM d, yyyy")</td>
-                                <td>@order.OrderItems?.Count ?? 0 items</td>
-                                <td class="text-primary fw-bold">$@order.TotalPrice.ToString("F2")</td>
+                                <td>@(order.OrderItems?.Count ?? 0) items</td>
+                                <td class="text-primary fw-bold">@("R" + order.TotalPrice.ToString("F2"))</td>
                                 <td>
                                     @{
                                         var statusClass = order.Status switch
                                         {
-                                            "Pending" => "bg-warning",
-                                            "Confirmed" => "bg-info",
-                                            "Shipped" => "bg-success",
-                                            "Delivered" => "bg-secondary",
+                                            OrderStatus.Pending => "bg-warning",
+                                            OrderStatus.Confirmed => "bg-info",
+                                            OrderStatus.InProduction => "bg-primary",
+                                            OrderStatus.Shipped => "bg-success",
+                                            OrderStatus.Delivered => "bg-secondary",
+                                            OrderStatus.Cancelled => "bg-danger",
                                             _ => "bg-dark"
                                         };
                                     }
-                                    <span class="badge @statusClass">@order.Status</span>
+                                    <span class="badge @statusClass">@order.Status.ToDisplayString()</span>
                                 </td>
                                 <td>
                                     <a asp-controller="Order" asp-action="Track" asp-route-id="@order.OrderId" class="btn btn-sm btn-outline-primary">

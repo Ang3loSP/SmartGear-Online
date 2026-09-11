@@ -24,14 +24,21 @@ namespace SmartGear_Online.Models
         public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
 
         [Required(ErrorMessage = "Order status is required")]
-        [StringLength(50)]
-        public string Status { get; set; } = "Pending";
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         [Required(ErrorMessage = "Total price is required")]
         [Range(0.01, 999999, ErrorMessage = "Total must be greater than 0")]
         [DataType(DataType.Currency)]
         [Display(Name = "Total Price ($)")]
         public decimal TotalPrice { get; set; }
+
+        [StringLength(50)]
+        [Display(Name = "Discount Code")]
+        public string? DiscountCode { get; set; }
+
+        [DataType(DataType.Currency)]
+        [Display(Name = "Discount Amount ($)")]
+        public decimal DiscountAmount { get; set; }
 
         [Required(ErrorMessage = "Shipping address is required")]
         [StringLength(500)]
@@ -48,7 +55,7 @@ namespace SmartGear_Online.Models
 
         [StringLength(100)]
         [Display(Name = "Tracking Number")]
-        public string TrackingNumber { get; set; } = string.Empty;
+        public string? TrackingNumber { get; set; }
 
         // Navigation properties
         public virtual ApplicationUser? Customer { get; set; }
@@ -72,7 +79,7 @@ namespace SmartGear_Online.Models
         /// </summary>
         public bool CanBeCancelled()
         {
-            return Status == "Pending" || Status == "Confirmed";
+            return Status == OrderStatus.Pending || Status == OrderStatus.Confirmed;
         }
 
         /// <summary>
@@ -82,12 +89,12 @@ namespace SmartGear_Online.Models
         {
             return Status switch
             {
-                "Pending" => "Order Received - Awaiting Confirmation",
-                "Confirmed" => "Order Confirmed - In Production",
-                "In Production" => "Items Being Customized & Assembled",
-                "Shipped" => "Order Shipped - On the Way",
-                "Delivered" => "Order Delivered",
-                "Cancelled" => "Order Cancelled",
+                OrderStatus.Pending => "Order Received - Awaiting Confirmation",
+                OrderStatus.Confirmed => "Order Confirmed - In Production",
+                OrderStatus.InProduction => "Items Being Customized & Assembled",
+                OrderStatus.Shipped => "Order Shipped - On the Way",
+                OrderStatus.Delivered => "Order Delivered",
+                OrderStatus.Cancelled => "Order Cancelled",
                 _ => "Unknown Status"
             };
         }
@@ -97,7 +104,7 @@ namespace SmartGear_Online.Models
         /// </summary>
         public bool IsShipped()
         {
-            return Status == "Shipped" || Status == "Delivered";
+            return Status == OrderStatus.Shipped || Status == OrderStatus.Delivered;
         }
     }
 }

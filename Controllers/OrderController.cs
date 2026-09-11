@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SmartGear_Online.Extensions;
 using SmartGear_Online.Models;
 using SmartGear_Online.Models.ViewModels;
 using SmartGear_Online.Repositories;
@@ -17,19 +16,22 @@ namespace SmartGear_Online.Controllers
     public class OrderController : Controller
     {
         private readonly IOrderRepository _orderRepository;
-        private readonly IProductRepository _productRepository;
-        private readonly INotificationService _notificationService;
+        private readonly ICartService _cartService;
+        private readonly IOrderService _orderService;
+        private readonly IEmailQueue _emailQueue;
         private readonly ILogger<OrderController> _logger;
 
         public OrderController(
             IOrderRepository orderRepository,
-            IProductRepository productRepository,
-            INotificationService notificationService,
+            ICartService cartService,
+            IOrderService orderService,
+            IEmailQueue emailQueue,
             ILogger<OrderController> logger)
         {
             _orderRepository = orderRepository;
-            _productRepository = productRepository;
-            _notificationService = notificationService;
+            _cartService = cartService;
+            _orderService = orderService;
+            _emailQueue = emailQueue;
             _logger = logger;
         }
 
@@ -37,14 +39,14 @@ namespace SmartGear_Online.Controllers
         // CHECKOUT
         // ================================================
         [HttpGet]
-        public IActionResult Checkout()
+        public async Task<IActionResult> Checkout()
         {
             try
             {
                 _logger.LogInformation("Checkout page requested by user {UserId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("ShoppingCart");
+                var shoppingCart = _cartService.GetCart();
 
                 if (shoppingCart == null || !shoppingCart.HasItems())
                 {
@@ -55,13 +57,18 @@ namespace SmartGear_Online.Controllers
                     return RedirectToAction("Index", "Cart");
                 }
 
+                var totals = await _orderService.CalculateOrderTotalsAsync(
+                    shoppingCart.Items, "Standard",
+                    shoppingCart.DiscountCode);
+
                 var checkoutModel = new CheckoutViewModel
                 {
                     CartItems = shoppingCart.Items,
-                    Subtotal = shoppingCart.Subtotal,
-                    Tax = shoppingCart.Subtotal * 0.08m,
-                    ShippingCost = shoppingCart.Subtotal > 50 ? 0 : 5.99m,
-                    GrandTotal = shoppingCart.Subtotal * 1.08m + (shoppingCart.Subtotal > 50 ? 0 : 5.99m)
+                    Subtotal = totals.Subtotal,
+                    Tax = totals.TaxAmount,
+                    ShippingCost = totals.ShippingCost,
+                    DiscountAmount = totals.DiscountAmount,
+                    GrandTotal = totals.GrandTotal
                 };
 
                 return View(checkoutModel);
@@ -88,7 +95,7 @@ namespace SmartGear_Online.Controllers
                 _logger.LogInformation("PlaceOrder POST called for user {UserId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-                var shoppingCart = HttpContext.Session.GetObjectFromJson<ShoppingCart>("ShoppingCart");
+                var shoppingCart = _cartService.GetCart();
 
                 if (shoppingCart == null || !shoppingCart.HasItems())
                 {
@@ -98,75 +105,41 @@ namespace SmartGear_Online.Controllers
 
                 if (!ModelState.IsValid)
                 {
+                    // Rebuild the summary from the server-side calculator so the
+                    // re-rendered form shows truthful totals.
+                    var totals = await _orderService.CalculateOrderTotalsAsync(
+                        shoppingCart.Items, model.ShippingMethod, shoppingCart.DiscountCode);
                     model.CartItems = shoppingCart.Items;
-                    model.Subtotal = shoppingCart.Subtotal;
-                    model.Tax = shoppingCart.Subtotal * 0.08m;
-                    model.ShippingCost = shoppingCart.Subtotal > 50 ? 0 : 5.99m;
-                    model.GrandTotal = shoppingCart.Subtotal + model.Tax + model.ShippingCost;
+                    model.Subtotal = totals.Subtotal;
+                    model.Tax = totals.TaxAmount;
+                    model.ShippingCost = totals.ShippingCost;
+                    model.DiscountAmount = totals.DiscountAmount;
+                    model.GrandTotal = totals.GrandTotal;
 
                     return View("Checkout", model);
                 }
 
-                foreach (var item in shoppingCart.Items)
-                {
-                    var product = await _productRepository.GetProductByIdAsync(item.ProductId);
+                // Everything (validation, totals, payment, stock, order+items)
+                // happens server-side inside one transaction.
+                var orderId = await _orderService.PlaceOrderAsync(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty,
+                    shoppingCart,
+                    model);
 
-                    if (product == null)
-                    {
-                        TempData["Error"] = "Product '" + item.ProductName + "' no longer exists.";
-                        return RedirectToAction("Index", "Cart");
-                    }
-
-                    if (!product.CanFulfillOrder(item.Quantity))
-                    {
-                        TempData["Error"] = "Insufficient stock for '" + product.ProductName + "'.";
-                        return RedirectToAction("Index", "Cart");
-                    }
-                }
-
-                var order = new Order
-                {
-                    CustomerId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-                    OrderDate = DateTime.UtcNow,
-                    Status = "Pending",
-                    ShippingAddress = model.GetShippingAddress(),
-                    BillingAddress = model.GetBillingAddress(),
-                    ShippingMethod = model.ShippingMethod,
-                    TotalPrice = model.GrandTotal
-                };
-
-                var orderId = await _orderRepository.CreateOrderAsync(order);
-
-                foreach (var item in shoppingCart.Items)
-                {
-                    var orderItem = new OrderItem
-                    {
-                        OrderId = orderId,
-                        ProductId = item.ProductId,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.Price
-                    };
-
-                    await _orderRepository.AddOrderItemAsync(orderItem);
-                    await _productRepository.ReduceInventoryAsync(item.ProductId, item.Quantity);
-                }
-
-                HttpContext.Session.Remove("ShoppingCart");
+                _cartService.Clear();
 
                 // Use the customer's own email from their claim
                 var customerEmail = User.FindFirstValue(ClaimTypes.Email)
-                                    ?? User.FindFirstValue(ClaimTypes.Name);
+                                ?? User.FindFirstValue(ClaimTypes.Name)
+                                ?? string.Empty;
 
-                _ = Task.Run(async () =>
+                // Queue the confirmation email off the request path (the
+                // background EmailWorker drains the channel).
+                _emailQueue.Enqueue(new EmailWorkItem
                 {
-                    try
-                    {
-                        await _notificationService.SendOrderConfirmationEmailAsync(orderId, customerEmail);
-                    }
-                    catch (Exception emailEx)
-                    {
-                        _logger.LogError(emailEx, "Failed to send confirmation email for order {OrderId}", orderId);
-                    }
+                    Type = EmailType.OrderConfirmation,
+                    OrderId = orderId,
+                    Email = customerEmail
                 });
 
                 _logger.LogInformation("Order {OrderId} placed successfully by user {UserId}",
@@ -221,7 +194,7 @@ namespace SmartGear_Online.Controllers
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var orders = await _orderRepository.GetCustomerOrdersAsync(userId);
+                var orders = await _orderRepository.GetCustomerOrdersAsync(userId ?? string.Empty);
                 return View(orders);
             }
             catch (Exception ex)
@@ -283,11 +256,17 @@ namespace SmartGear_Online.Controllers
                 if (order == null)
                     return Json(new { success = false, message = "Order not found" });
 
-                var validStatuses = new[] { "Pending", "Confirmed", "In Production", "Shipped", "Delivered", "Cancelled" };
-                if (!validStatuses.Contains(status))
+                // Status arrives from the front-end as a display string
+                // (e.g. "In Production"); parse it into the enum safely.
+                if (!OrderStatusExtensions.TryParseDisplayName(status, out var parsedStatus))
                     return Json(new { success = false, message = "Invalid status value" });
 
-                await _orderRepository.UpdateOrderStatusAsync(orderId, status);
+                // Transition guard + (for cancels) stock restore live in the service.
+                var result = await _orderService.UpdateStatusAsync(
+                    orderId, parsedStatus, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty);
+
+                if (!result.Success)
+                    return Json(new { success = false, message = result.Message });
 
                 // FIX: retrieve the customer's email from the order's navigation property,
                 // not from the currently logged-in admin's claims.
@@ -295,21 +274,16 @@ namespace SmartGear_Online.Controllers
 
                 if (!string.IsNullOrEmpty(customerEmail))
                 {
-                    _ = Task.Run(async () =>
+                    _emailQueue.Enqueue(new EmailWorkItem
                     {
-                        try
-                        {
-                            await _notificationService.SendOrderStatusUpdateAsync(orderId, status, customerEmail);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogError(emailEx,
-                                "Failed to send status update email for order {OrderId}", orderId);
-                        }
+                        Type = EmailType.OrderStatusUpdate,
+                        OrderId = orderId,
+                        Email = customerEmail,
+                        Status = parsedStatus
                     });
                 }
 
-                return Json(new { success = true, message = "Order status updated to " + status });
+                return Json(new { success = true, message = result.Message });
             }
             catch (Exception ex)
             {
@@ -332,22 +306,14 @@ namespace SmartGear_Online.Controllers
                 if (order == null)
                     return Json(new { success = false, message = "Order not found" });
 
-                if (!order.CanBeCancelled())
-                    return Json(new { success = false, message = "Order cannot be cancelled at this stage" });
+                // Cancellation (status + inventory restore) is atomic in the service.
+                var result = await _orderService.UpdateStatusAsync(
+                    orderId, OrderStatus.Cancelled, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty);
 
-                await _orderRepository.UpdateOrderStatusAsync(orderId, "Cancelled");
+                if (!result.Success)
+                    return Json(new { success = false, message = result.Message });
 
-                foreach (var item in order.OrderItems)
-                {
-                    var product = await _productRepository.GetProductByIdAsync(item.ProductId);
-                    if (product != null)
-                    {
-                        product.ReplenishInventory(item.Quantity);
-                        await _productRepository.UpdateProductAsync(product);
-                    }
-                }
-
-                return Json(new { success = true, message = "Order cancelled successfully" });
+                return Json(new { success = true, message = result.Message });
             }
             catch (Exception ex)
             {

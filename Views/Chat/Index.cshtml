@@ -1,80 +1,325 @@
-﻿@using SmartGear_Online.Models.ViewModels
-@model LoginViewModel
-
+﻿@* Live Chat (Chat/Index.cshtml) *@
+@using System.Text.Json
 @{
-    ViewData["Title"] = "Login";
-    Layout = "_Layout";
+    ViewData["Title"] = "Live Chat - SmartGear Online";
 }
 
-<div class="container mt-5" style="max-width: 450px;">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white text-center py-3">
-            <h4 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Sign In to SmartGear</h4>
+<link rel="stylesheet" href="~/css/chat.css" />
+
+<div class="container my-5">
+    <div class="card shadow-sm chat-card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0">
+                <i class="fas fa-comments me-2"></i> Live Support Chat
+            </h5>
+            <span id="connectionBadge" class="badge bg-secondary">Connecting...</span>
         </div>
-        <div class="card-body p-4">
 
-            @if (!string.IsNullOrEmpty(ViewData["ReturnUrl"] as string))
-            {
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    Please login to continue
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            }
+        <div class="card-body p-0">
+            <div class="chat-layout">
+                <!-- MESSAGES PANE -->
+                <div class="chat-messages-pane">
+                    <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
 
-            <form asp-controller="Account" asp-action="Login" method="post" asp-route-returnurl="@ViewData["ReturnUrl"]">
-                @Html.AntiForgeryToken()
-
-                @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
-                {
-                    <div class="alert alert-danger">
-                        @foreach (var error in ViewData.ModelState[string.Empty].Errors)
-                        {
-                            <p class="mb-0">@error.ErrorMessage</p>
-                        }
+                    <div id="typingIndicator" class="typing-indicator text-muted" style="display:none;">
+                        <span class="typing-dots"><span></span><span></span><span></span></span>
+                        <span id="typingText"></span>
                     </div>
-                }
 
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label">Email Address</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                        <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                    <div id="privateTargetBar" class="private-target" style="display:none;">
+                        <span>
+                            <i class="fas fa-lock me-1"></i>
+                            Messaging <strong id="privateTargetName"></strong>
+                        </span>
+                        <button type="button" id="cancelPrivateBtn" class="btn btn-sm btn-outline-secondary">Cancel</button>
                     </div>
-                    <span asp-validation-for="Email" class="text-danger"></span>
-                </div>
 
-                <div class="mb-3">
-                    <label asp-for="Password" class="form-label">Password</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                        <input asp-for="Password" class="form-control" type="password" />
+                    <div class="chat-composer">
+                        <input id="messageInput" class="form-control" maxlength="500"
+                               placeholder="Type a message to the team..." autocomplete="off"
+                               aria-label="Message" />
+                        <button id="sendButton" class="btn btn-primary" title="Send" aria-label="Send message">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <span asp-validation-for="Password" class="text-danger"></span>
                 </div>
 
-                <div class="mb-3 form-check">
-                    <input asp-for="RememberMe" class="form-check-input" />
-                    <label asp-for="RememberMe" class="form-check-label">Remember me</label>
+                <!-- ACTIVE USERS SIDEBAR (ADMIN ONLY) -->
+                <div class="chat-users-pane" id="activeUsersPanel" @(User.IsInRole("Admin") ? "" : "hidden")>
+                    <div class="p-3">
+                        <h6 class="mb-1"><i class="fas fa-users me-1"></i> Online</h6>
+                        <p class="text-muted small mb-2" id="userCount">0 users online</p>
+                        <ul id="activeUsersList" class="list-unstyled chat-users-list"></ul>
+                    </div>
                 </div>
-
-                <button type="submit" class="btn btn-primary w-100 py-2">
-                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
-                </button>
-            </form>
-
-            <hr class="my-4" />
-
-            <div class="text-center">
-                <p class="mb-0">
-                    Don't have an account?
-                    <a asp-controller="Account" asp-action="Register">Create an account</a>
-                </p>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
-    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@@8.0.9/dist/browser/signalr.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            var currentUserId = @Html.Raw(JsonSerializer.Serialize(User.Identity?.Name));
+            var isAdmin = '@(User.IsInRole("Admin") ? "true" : "false")' === 'true';
+            var privateTarget = null; // { userId, userName }
+
+            var connection = new signalR.HubConnectionBuilder()
+                .withUrl('/chathub')
+                .configureLogging(signalR.LogLevel.Warning)
+                .withAutomaticReconnect()
+                .build();
+
+            // ---------- DOM helpers ----------
+
+            var messagesEl = document.getElementById('chatMessages');
+            var typingEl = document.getElementById('typingIndicator');
+            var typingTextEl = document.getElementById('typingText');
+            var statusBadge = document.getElementById('connectionBadge');
+            var input = document.getElementById('messageInput');
+            var sendBtn = document.getElementById('sendButton');
+
+            function scrollToBottom() {
+                if (messagesEl) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+            }
+
+            function setStatus(state) {
+                statusBadge.className = 'badge ';
+                if (state === 'connected') {
+                    statusBadge.className += 'bg-success';
+                    statusBadge.textContent = 'Connected';
+                } else if (state === 'connecting') {
+                    statusBadge.className += 'bg-secondary';
+                    statusBadge.textContent = 'Connecting...';
+                } else {
+                    statusBadge.className += 'bg-danger';
+                    statusBadge.textContent = 'Disconnected';
+                }
+            }
+
+            // XSS-safe message rendering (uses textContent, never innerHTML)
+            function appendMessage(msg) {
+                if (!messagesEl) return;
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'chat-message';
+                if (msg.isPrivate || msg.isAdmin) wrapper.classList.add('is-special');
+                var isSelf = msg.userId === currentUserId;
+
+                var header = document.createElement('div');
+                header.className = 'msg-header';
+
+                var name = document.createElement('span');
+                name.className = 'msg-user';
+                if (msg.isAdmin) name.classList.add('admin');
+                name.textContent = msg.userName + (msg.isPrivate ? ' (private)' : '');
+
+                var time = document.createElement('span');
+                time.className = 'msg-time';
+                time.textContent = msg.timestamp || '';
+
+                header.appendChild(name);
+                header.appendChild(time);
+
+                var body = document.createElement('div');
+                body.className = 'msg-body';
+                body.textContent = msg.message;
+
+                wrapper.appendChild(header);
+                wrapper.appendChild(body);
+                messagesEl.appendChild(wrapper);
+                scrollToBottom();
+            }
+
+            function appendSystemMessage(text) {
+                if (!messagesEl) return;
+                var el = document.createElement('div');
+                el.className = 'system-message';
+                el.textContent = text;
+                messagesEl.appendChild(el);
+                scrollToBottom();
+            }
+
+            function setTyping(userName, isTyping, excludeSelf) {
+                if (!typingEl || !typingTextEl) return;
+                if (excludeSelf && userName === currentUserId) return;
+                if (isTyping && userName === currentUserId) return;
+
+                typingEl.style.display = isTyping ? 'flex' : 'none';
+                typingTextEl.textContent = isTyping ? (userName + ' is typing...') : '';
+            }
+
+            function renderUsers(users) {
+                var list = document.getElementById('activeUsersList');
+                var count = document.getElementById('userCount');
+                if (!list) return;
+
+                if (!users) users = [];
+                var onlineUsers = users.filter(function (u) {
+                    return u.userId !== currentUserId;
+                });
+
+                list.innerHTML = '';
+                if (count) {
+                    count.textContent = onlineUsers.length + ' user' + (onlineUsers.length === 1 ? '' : 's') + ' online';
+                }
+
+                if (onlineUsers.length === 0) {
+                    var empty = document.createElement('li');
+                    empty.className = 'text-muted small';
+                    empty.textContent = 'No customers online right now.';
+                    list.appendChild(empty);
+                    return;
+                }
+
+                onlineUsers.forEach(function (u) {
+                    var li = document.createElement('li');
+                    li.className = 'chat-user-item';
+
+                    var nameSpan = document.createElement('span');
+                    nameSpan.className = 'chat-user-name';
+                    nameSpan.textContent = u.userName;
+
+                    var pmBtn = document.createElement('button');
+                    pmBtn.type = 'button';
+                    pmBtn.className = 'btn btn-sm btn-outline-primary';
+                    pmBtn.innerHTML = '<i class="fas fa-lock"></i>';
+                    pmBtn.title = 'Private message ' + u.userName;
+                    pmBtn.addEventListener('click', function () {
+                        setPrivateTarget(u);
+                    });
+
+                    li.appendChild(nameSpan);
+                    li.appendChild(pmBtn);
+                    list.appendChild(li);
+                });
+            }
+
+            function setPrivateTarget(user) {
+                privateTarget = { userId: user.userId, userName: user.userName };
+                document.getElementById('privateTargetBar').style.display = 'flex';
+                document.getElementById('privateTargetName').textContent = user.userName;
+                input.placeholder = 'Private message to ' + user.userName + '...';
+                input.focus();
+            }
+
+            function clearPrivateTarget() {
+                privateTarget = null;
+                document.getElementById('privateTargetBar').style.display = 'none';
+                input.placeholder = 'Type a message to the team...';
+            }
+
+            // ---------- Hub events ----------
+
+            connection.on('ReceiveMessage', function (msg) {
+                appendMessage(msg);
+            });
+
+            connection.on('ReceivePrivateMessage', function (msg) {
+                appendMessage(msg);
+            });
+
+            connection.on('PrivateMessageSent', function (msg) {
+                appendMessage(msg);
+            });
+
+            connection.on('UserTyping', function (userName, isTyping) {
+                setTyping(userName, isTyping, true);
+            });
+
+            connection.on('UserCountUpdated', function (count) {
+                var el = document.getElementById('userCount');
+                if (el) el.textContent = count + ' users online';
+            });
+
+            connection.on('UserConnected', function (data) {
+                appendSystemMessage(data.userName + ' has joined the chat');
+            });
+
+            connection.on('UserDisconnected', function (data) {
+                appendSystemMessage(data.userName + ' has left the chat');
+            });
+
+            connection.on('ActiveUsersList', function (users) {
+                renderUsers(users);
+            });
+
+            connection.on('ErrorMessage', function (message) {
+                appendSystemMessage(message);
+            });
+
+            // ---------- Sending ----------
+
+            function sendMessage() {
+                var text = input.value.trim();
+                if (!text) return;
+                if (connection.state !== signalR.HubConnectionState.Connected) {
+                    appendSystemMessage('You are not connected yet. Please wait...');
+                    return;
+                }
+
+                if (privateTarget) {
+                    connection.invoke('SendPrivateMessage', privateTarget.userId, text)
+                        .catch(function (err) { console.error(err); });
+                } else {
+                    connection.invoke('SendMessage', text)
+                        .catch(function (err) { console.error(err); });
+                }
+
+                if (currentUserId) {
+                    connection.invoke('UserTyping', currentUserId, false).catch(function () { });
+                }
+                input.value = '';
+                input.focus();
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            input.addEventListener('input', function () {
+                if (currentUserId && connection.state === signalR.HubConnectionState.Connected) {
+                    connection.invoke('UserTyping', currentUserId, true).catch(function () { });
+                }
+            });
+
+            document.getElementById('cancelPrivateBtn').addEventListener('click', clearPrivateTarget);
+
+            // ---------- Lifecycle ----------
+
+            connection.onreconnecting(function () { setStatus('connecting'); });
+            connection.onreconnected(function () {
+                setStatus('connected');
+                if (isAdmin) {
+                    connection.invoke('GetActiveUsers').then(renderUsers).catch(function () { });
+                }
+            });
+            connection.onclose(function () { setStatus('disconnected'); });
+
+            connection.start()
+                .then(function () {
+                    setStatus('connected');
+                    appendSystemMessage('Connected to live support. Welcome to SmartGear!');
+                    if (isAdmin) {
+                        connection.invoke('GetActiveUsers').then(renderUsers).catch(function () { });
+                    } else {
+                        var usersPanel = document.getElementById('activeUsersPanel');
+                        if (usersPanel) usersPanel.hidden = true;
+                    }
+                })
+                .catch(function (err) {
+                    setStatus('disconnected');
+                    appendSystemMessage('Failed to connect to chat: ' + err.message);
+                });
+        })();
+    </script>
 }

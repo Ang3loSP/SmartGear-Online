@@ -25,11 +25,11 @@
                 <div class="card-body">
                     <!-- Search Box -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">Search Products</label>
+                        <label class="form-label fw-bold" for="productSearch">Search Products</label>
                         <form asp-action="Search" asp-controller="Product" method="get" class="input-group">
-                            <input type="text" name="query" class="form-control" placeholder="Search..." required>
-                            <button class="btn btn-primary" type="submit">
-                                <i class="fas fa-search"></i>
+                            <input type="text" name="query" id="productSearch" class="form-control" placeholder="Search products..." required>
+                            <button class="btn btn-primary" type="submit" aria-label="Search">
+                                <i class="fas fa-search" aria-hidden="true"></i>
                             </button>
                         </form>
                     </div>
@@ -154,7 +154,7 @@
                                     </p>
 
                                     <div class="mb-3 pb-3 border-bottom">
-                                        <h6 class="text-primary fw-bold mb-2">$@product.Price.ToString("F2")</h6>
+                                        <h6 class="text-primary fw-bold mb-2">@("R" + product.Price.ToString("F2"))</h6>
                                         @if (product.QuantityInStock > 0)
                                         {
                                             <small class="text-success">

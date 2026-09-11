@@ -87,21 +87,20 @@ namespace SmartGear_Online.Models.ViewModels
         public string BillingPostalCode { get; set; } = string.Empty;
 
         // Payment information
+        // SECURITY FIX: the full Primary Account Number (PAN) is never bound to
+        // the server model — checkout.js computes only the last four digits in
+        // the browser and the full number never leaves the client. No CVV is
+        // bound or persisted anywhere.
         [Required(ErrorMessage = "Card number is required")]
-        [CreditCard(ErrorMessage = "Invalid card number")]
+        [RegularExpression(@"^\d{4}$", ErrorMessage = "Enter the full card number so the last 4 digits can be captured")]
         [Display(Name = "Card Number")]
-        public string CardNumber { get; set; } = string.Empty;
+        public string CardNumberLast4 { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Expiry date is required")]
         [RegularExpression(@"^(0[1-9]|1[0-2])\/([0-9]{2})$",
             ErrorMessage = "Expiry date must be in MM/YY format")]
         [Display(Name = "Expiry Date (MM/YY)")]
         public string ExpiryDate { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "CVV is required")]
-        [StringLength(4, MinimumLength = 3)]
-        [Display(Name = "CVV")]
-        public string Cvv { get; set; } = string.Empty;
 
         // Terms agreement
         [Range(typeof(bool), "true", "true",

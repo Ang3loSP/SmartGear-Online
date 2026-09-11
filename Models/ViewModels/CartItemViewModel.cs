@@ -24,8 +24,8 @@ namespace SmartGear_Online.Models.ViewModels
 
         // Display properties
         public string DisplayName => GetDisplayName();
-        public string DisplayPrice => $"${UnitPrice:F2}";
-        public string DisplayLineTotal => $"${LineTotal:F2}";
+        public string DisplayPrice => $"R{UnitPrice:F2}";
+        public string DisplayLineTotal => $"R{LineTotal:F2}";
 
         private string GetDisplayName()
         {

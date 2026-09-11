@@ -39,8 +39,8 @@
                 </div>
                 <div class="card-body">
                     <p><strong>Order Date:</strong> @Model.OrderDate.ToString("MMMM d, yyyy")</p>
-                    <p><strong>Status:</strong> <span class="badge bg-warning">@Model.Status</span></p>
-                    <p><strong>Total Amount:</strong> <span class="text-primary fw-bold">$@Model.TotalPrice.ToString("F2")</span></p>
+                    <p><strong>Status:</strong> <span class="badge bg-warning">@Model.Status.ToDisplayString()</span></p>
+                    <p><strong>Total Amount:</strong> <span class="text-primary fw-bold">@("R" + Model.TotalPrice.ToString("F2"))</span></p>
                     <p><strong>Shipping Address:</strong><br>@Model.ShippingAddress</p>
                 </div>
             </div>

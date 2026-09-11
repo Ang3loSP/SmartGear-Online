@@ -30,6 +30,7 @@ namespace SmartGear_Online.Models
         public bool IsActive { get; set; } = true;
 
         [Display(Name = "Profile Picture URL")]
+        [StringLength(500)]
         public string ProfilePictureUrl { get; set; } = string.Empty;
     }
 }
