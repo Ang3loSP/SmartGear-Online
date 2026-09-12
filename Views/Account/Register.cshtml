@@ -37,7 +37,7 @@
 
                 <div class="mb-3">
                     <label asp-for="PhoneNumber" class="form-label">Phone Number *</label>
-                    <input asp-for="PhoneNumber" class="form-control" placeholder="e.g. 0831234567 or +27831234567">
+                    <input asp-for="PhoneNumber" type="tel" autocomplete="tel" class="form-control" placeholder="e.g. 0831234567 or +27831234567">
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                 </div>
 

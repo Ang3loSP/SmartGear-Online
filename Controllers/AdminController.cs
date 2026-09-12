@@ -134,17 +134,6 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
-        // MANAGE PRODUCTS - Admin only
-        // Redirects to Inventory view
-        // ================================================
-        [HttpGet]
-        public async Task<IActionResult> ManageProducts()
-        {
-            var products = await _productRepository.GetProductsAsync(1, 100);
-            return View("Inventory", products);
-        }
-
-        // ================================================
         // INVENTORY - Admin only (explicit route)
         // ================================================
         [HttpGet]

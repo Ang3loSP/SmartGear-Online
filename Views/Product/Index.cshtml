@@ -15,7 +15,13 @@
     <div class="row">
         <!-- LEFT SIDEBAR: Category Filter -->
         <div class="col-md-3 mb-4">
-            <div class="card shadow-sm sticky-top" style="top: 100px;">
+            <button class="btn btn-primary w-100 d-md-none mb-3" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#filterCollapse"
+                    aria-expanded="false" aria-controls="filterCollapse">
+                <i class="fas fa-filter me-2"></i> Filters
+            </button>
+            <div class="collapse d-md-block" id="filterCollapse">
+            <div class="card shadow-sm filter-sidebar">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-filter me-2"></i> Filters
@@ -67,7 +73,7 @@
                             <input type="number" class="form-control form-control-sm" id="priceMin" placeholder="Min" value="0">
                             <input type="number" class="form-control form-control-sm" id="priceMax" placeholder="Max" value="500">
                         </div>
-                        <button class="btn btn-sm btn-outline-primary w-100" onclick="filterByPrice()">Apply Price Filter</button>
+                        <button class="btn btn-outline-primary w-100" onclick="filterByPrice()">Apply Price Filter</button>
                     </div>
 
                     <!-- Stock Filter -->
@@ -84,6 +90,7 @@
                         <i class="fas fa-redo me-2"></i> Clear All Filters
                     </button>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -170,18 +177,18 @@
                                     </div>
 
                                     <div class="btn-group w-100" role="group">
-                                        <a asp-action="Details" asp-controller="Product" asp-route-id="@product.ProductId" class="btn btn-outline-primary btn-sm">
+                                        <a asp-action="Details" asp-controller="Product" asp-route-id="@product.ProductId" class="btn btn-outline-primary">
                                             <i class="fas fa-eye me-1"></i> Details
                                         </a>
                                         @if (product.QuantityInStock > 0)
                                         {
-                                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="@product.ProductId" class="btn btn-primary btn-sm">
+                                            <a asp-action="Create" asp-controller="Customization" asp-route-productId="@product.ProductId" class="btn btn-primary">
                                                 <i class="fas fa-palette me-1"></i> Customize
                                             </a>
                                         }
                                         else
                                         {
-                                            <button class="btn btn-secondary btn-sm" disabled>Unavailable</button>
+                                            <button class="btn btn-secondary" disabled>Unavailable</button>
                                         }
                                     </div>
                                 </div>

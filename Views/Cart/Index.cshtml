@@ -99,16 +99,16 @@
 
                                         <!-- Quantity Controls -->
                                         <td class="align-middle">
-                                            <div class="input-group quantity-control" style="width: 120px;">
-                                                <button class="btn btn-sm btn-outline-secondary qty-btn qty-decrease"
+                                            <div class="input-group quantity-control" style="width: 150px;">
+                                                <button class="btn btn-outline-secondary qty-btn qty-decrease"
                                                         type="button" title="Decrease Quantity">
                                                     <i class="fas fa-minus"></i>
                                                 </button>
 
-                                                <input type="number" class="form-control form-control-sm text-center qty-input"
+                                                <input type="number" class="form-control text-center qty-input"
                                                        value="@item.Quantity" min="1" max="100" data-item-id="@item.CartItemId">
 
-                                                <button class="btn btn-sm btn-outline-secondary qty-btn qty-increase"
+                                                <button class="btn btn-outline-secondary qty-btn qty-increase"
                                                         type="button" title="Increase Quantity">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
@@ -124,7 +124,7 @@
 
                                         <!-- Remove Button -->
                                         <td class="align-middle">
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn"
+                                            <button type="button" class="btn btn-outline-danger remove-item-btn"
                                                     data-item-id="@item.CartItemId" title="Remove Item">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -195,7 +195,7 @@
                             <div class="input-group">
                                 <input type="text" class="form-control form-control-sm discount-input"
                                        id="discountCode" placeholder="Enter code" maxlength="20">
-                                <button class="btn btn-sm btn-outline-secondary" id="applyDiscountBtn" type="button">
+                                <button class="btn btn-outline-secondary" id="applyDiscountBtn" type="button">
                                     Apply
                                 </button>
                             </div>

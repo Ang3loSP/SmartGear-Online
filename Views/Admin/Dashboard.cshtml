@@ -22,7 +22,7 @@
             <p class="text-muted">Welcome back! Here's your business overview.</p>
         </div>
 
-        <div class="btn-group">
+        <div class="btn-group flex-wrap">
             <button class="btn btn-outline-secondary active" onclick="filterByPeriod('month')">This Month</button>
             <button class="btn btn-outline-secondary" onclick="filterByPeriod('quarter')">This Quarter</button>
             <button class="btn btn-outline-secondary" onclick="filterByPeriod('year')">This Year</button>
@@ -199,7 +199,7 @@
                                 <h6 class="mb-1">@item.ProductName</h6>
                                 <small class="text-muted">Only @item.CurrentStock units remaining (reorder at @item.ReorderLevel)</small>
                             </div>
-                            <a asp-controller="Admin" asp-action="Inventory" class="btn btn-sm @(item.AlertLevel == "Critical" ? "btn-danger" : "btn-warning")">REORDER</a>
+                            <a asp-controller="Admin" asp-action="Inventory" class="btn @(item.AlertLevel == "Critical" ? "btn-danger" : "btn-warning")">REORDER</a>
                         </div>
                     }
                     @if (!Model.LowStockAlerts.Any())
