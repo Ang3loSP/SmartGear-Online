@@ -29,7 +29,7 @@ namespace SmartGear_Online.Models
         [Required(ErrorMessage = "Total price is required")]
         [Range(0.01, 999999, ErrorMessage = "Total must be greater than 0")]
         [DataType(DataType.Currency)]
-        [Display(Name = "Total Price ($)")]
+        [Display(Name = "Total Price (R)")]
         public decimal TotalPrice { get; set; }
 
         [StringLength(50)]

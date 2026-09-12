@@ -40,6 +40,11 @@ namespace SmartGear_Online.Controllers.API   // Fixed namespace
         {
             try
             {
+                // Clamp so malformed input (page=0, pageSize=10000000) can
+                // never produce a 500 from Skip() or exhaust memory.
+                page = Math.Max(1, page);
+                pageSize = Math.Clamp(pageSize, 1, 100);
+
                 _logger.LogInformation("API: GetProducts called - Page {Page}, Size {PageSize}", page, pageSize);
 
                 var products = await _productRepository.GetProductsAsync(page, pageSize);

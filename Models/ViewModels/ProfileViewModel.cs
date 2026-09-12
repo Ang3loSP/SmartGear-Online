@@ -53,18 +53,20 @@ namespace SmartGear_Online.Models.ViewModels
         public int ProfileCompletionPercentage => CalculateProfileCompletion();
 
         /// <summary>
-        /// Calculates how complete the user profile is (0-100%)
+        /// Calculates how complete the user profile is (0-100%).
+        /// FIX: the old version counted the email twice (25 + 25) so no
+        /// profile could ever reach 100%; weighted so a fully-registered
+        /// account scores 100.
         /// </summary>
         private int CalculateProfileCompletion()
         {
             int completion = 0;
 
-            if (!string.IsNullOrEmpty(FullName)) completion += 25;
-            if (!string.IsNullOrEmpty(PhoneNumber)) completion += 25;
-            if (!string.IsNullOrEmpty(Email)) completion += 25;
-            if (Email?.Contains("@") == true) completion += 25;
+            if (!string.IsNullOrEmpty(FullName)) completion += 40;
+            if (!string.IsNullOrEmpty(PhoneNumber)) completion += 30;
+            if (Email?.Contains("@") == true) completion += 30;
 
-            return completion;
+            return Math.Min(100, completion);
         }
     }
 }

@@ -25,7 +25,7 @@ namespace SmartGear_Online.Models
         [Required]
         [Range(0.01, 10000)]
         [DataType(DataType.Currency)]
-        [Display(Name = "Unit Price ($)")]
+        [Display(Name = "Unit Price (R)")]
         public decimal UnitPrice { get; set; }
 
         // Navigation properties

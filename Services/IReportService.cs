@@ -51,6 +51,20 @@ namespace SmartGear_Online.Services
         Task<OrderStatistics> GetOrderStatisticsAsync();
 
         /// <summary>
+        /// Revenue for all-time / today / this week / this month / this year
+        /// (plus order count &amp; average order value), computed in a single
+        /// aggregate SQL query.
+        /// </summary>
+        Task<RevenueMetrics> GetRevenueMetricsAsync();
+
+        /// <summary>
+        /// Active products currently at or below their own reorder level.
+        /// Live (uncached) call used by the admin dashboard, which historically
+        /// loaded every product just to compute this.
+        /// </summary>
+        Task<List<LowStockAlert>> GetLowStockByReorderLevelAsync();
+
+        /// <summary>
         /// Export report as CSV
         /// </summary>
         Task<byte[]> ExportReportToCsvAsync(SalesReport report);
@@ -154,5 +168,16 @@ namespace SmartGear_Online.Services
         // Today's metrics
         public int OrdersToday { get; set; }
         public decimal RevenueToday { get; set; }
+    }
+
+    public class RevenueMetrics
+    {
+        public decimal TotalRevenue { get; set; }
+        public int TotalOrders { get; set; }
+        public decimal AverageOrderValue { get; set; }
+        public decimal TodayRevenue { get; set; }
+        public decimal WeekRevenue { get; set; }
+        public decimal MonthRevenue { get; set; }
+        public decimal YearRevenue { get; set; }
     }
 }

@@ -43,9 +43,26 @@ namespace SmartGear_Online.Controllers
         {
             try
             {
+                // Clamp the URL-supplied bounds: a negative/zero page would
+                // make Skip() throw, and a huge pageSize would load (and cache)
+                // the whole catalogue keyed on a giant string.
+                if (page < 1) page = 1;
+                pageSize = Math.Clamp(pageSize, 1, 48);
+
+                // Real server-side pagination: the pager links to pages that
+                // actually exist, and an out-of-range page is clamped instead
+                // of 404ing or rendering an empty grid.
+                var totalProducts = await _productRepository.GetProductCountAsync();
+                var totalPages = Math.Max(1, (int)Math.Ceiling(totalProducts / (double)pageSize));
+                if (page > totalPages) page = totalPages;
+
                 _logger.LogInformation("ProductController.Index() called with page={Page}", page);
 
                 var products = await _productRepository.GetProductsAsync(page, pageSize);
+
+                ViewData["Page"] = page;
+                ViewData["PageSize"] = pageSize;
+                ViewData["TotalPages"] = totalPages;
 
                 return View(products);
             }

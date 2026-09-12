@@ -178,7 +178,9 @@
 
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="ShippingMethod"
-                                       id="standardShipping" value="Standard" checked onchange="updateShipping()">
+                                       id="standardShipping" value="Standard"
+                                       checked="@(string.Equals(Model.ShippingMethod, "Standard", StringComparison.OrdinalIgnoreCase))"
+                                       onchange="updateShipping()">
                                 <label class="form-check-label" for="standardShipping">
                                     <strong>Standard Shipping (5-7 business days)</strong> -
                                     <span class="text-success">R5.99 (FREE on orders over R50)</span>
@@ -187,7 +189,9 @@
 
                             <div class="form-check mt-2">
                                 <input class="form-check-input" type="radio" name="ShippingMethod"
-                                       id="expressShipping" value="Express" onchange="updateShipping()">
+                                       id="expressShipping" value="Express"
+                                       checked="@(string.Equals(Model.ShippingMethod, "Express", StringComparison.OrdinalIgnoreCase))"
+                                       onchange="updateShipping()">
                                 <label class="form-check-label" for="expressShipping">
                                     <strong>Express Shipping (1-2 business days)</strong> -
                                     <span class="text-primary">+R15.00</span>
@@ -302,8 +306,8 @@
                         <div class="form-check mt-4">
                             <input class="form-check-input" type="checkbox" id="agreeTerms" required>
                             <label class="form-check-label" for="agreeTerms">
-                                I agree to the <a href="#">Terms & Conditions</a> &
-                                <a href="#">Privacy Policy</a>
+                                I agree to the terms & conditions and the
+                                <a asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
                             </label>
                         </div>
                     </div>
@@ -354,11 +358,19 @@
 
                             <div class="d-flex justify-content-between small mb-2">
                                 <span>Shipping:</span>
-                                <span id="summaryShipping">FREE</span>
+                                <span id="summaryShipping" @(Model.ShippingCost == 0 ? "class=\"text-success fw-bold\"" : "")>@(Model.ShippingCost == 0 ? "FREE" : "R" + Model.ShippingCost.ToString("F2"))</span>
                             </div>
 
+                            @if (Model.DiscountAmount > 0)
+                            {
+                                <div class="d-flex justify-content-between small mb-2">
+                                    <span>Discount (@Model.DiscountCode):</span>
+                                    <span class="text-success">-R@(Model.DiscountAmount.ToString("F2"))</span>
+                                </div>
+                            }
+
                             <div class="d-flex justify-content-between small mb-3 pb-3 border-bottom">
-                                <span>Tax (8%):</span>
+                                <span>Tax (@(((decimal)ViewBag.TotalsConfig.TaxPercent).ToString("0.##"))%):</span>
                                 <span id="summaryTax">@("R" + Model.Tax.ToString("F2"))</span>
                             </div>
 
@@ -368,6 +380,16 @@
                                     R<span id="summaryTotal">@Model.GrandTotal.ToString("F2")</span>
                                 </h5>
                             </div>
+
+                            <!-- Live business rules (OrderSettings) + discount state,
+                                 read by checkout.js so its recalcs match the server. -->
+                            <div id="totalsConfig" class="d-none"
+                                 data-tax="@(((decimal)ViewBag.TotalsConfig.TaxRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                                 data-threshold="@(((decimal)ViewBag.TotalsConfig.FreeThreshold).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                                 data-standard="@(((decimal)ViewBag.TotalsConfig.StandardRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                                 data-express="@(((decimal)ViewBag.TotalsConfig.ExpressRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                                 data-discount="@(Model.DiscountAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))"
+                                 data-freeship="@(ViewBag.FreeShippingApplied == true ? "true" : "false")"></div>
                         </div>
 
                         <div class="mt-4">

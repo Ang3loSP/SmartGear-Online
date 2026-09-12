@@ -7,19 +7,15 @@ namespace SmartGear_Online.Hubs
     /// <summary>
     /// Real-time inventory updates hub.
     /// Notifies admins when inventory changes or stock is low.
+    /// SECURITY: only members of the Admin role may connect — a customer
+    /// could otherwise spoof low-stock alerts to every connected admin.
     /// </summary>
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class InventoryHub : Hub
     {
         public override async Task OnConnectedAsync()
         {
-            var isAdmin = Context.User?.IsInRole("Admin") ?? false;
-
-            if (isAdmin)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
-            }
-
+            await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
             await base.OnConnectedAsync();
         }
 

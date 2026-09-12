@@ -15,7 +15,17 @@
                     <p class="text-muted">Order #@Model.OrderId</p>
 
                     <div class="alert alert-info">
-                        A confirmation email has been sent to your email address.
+                        @if ((bool?)ViewData["EmailEnabled"] == true)
+                        {
+                            <text>A confirmation email has been sent to your email address.</text>
+                        }
+                        else
+                        {
+                            <text>
+                                Confirmation emails aren't enabled yet — you can review
+                                your order at any time under <a asp-controller="Order" asp-action="History">My Orders</a>.
+                            </text>
+                        }
                     </div>
 
                     <div class="mt-4">

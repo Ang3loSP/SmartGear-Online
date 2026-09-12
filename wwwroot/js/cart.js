@@ -2,6 +2,23 @@
 // Shopping Cart JavaScript - SmartGear Online
 // ================================================
 
+// Live business rules rendered by the server (OrderSettings). Every number the
+// page calculates with comes from here — same values OrderService uses — so the
+// preview can never disagree with the checkout. The fallbacks keep the page
+// working if the element is ever missing.
+function getTotalsConfig() {
+    const el = document.getElementById('totalsConfig');
+    return {
+        taxRate: parseFloat(el?.dataset.tax) || 0.08,
+        freeThreshold: parseFloat(el?.dataset.threshold) || 50,
+        standardRate: parseFloat(el?.dataset.standard) || 5.99
+    };
+}
+
+// True once the FREESHIP code has been applied, so updateCartTotals() must not
+// re-apply the R50 free-shipping rule and overwrite the free ride.
+let discountFreeShipping = false;
+
 // Update cart totals (subtotal, tax, shipping, total)
 function updateCartTotals() {
     let subtotal = 0;
@@ -15,7 +32,8 @@ function updateCartTotals() {
         subtotal += lineTotal;
     });
 
-    const tax = subtotal * 0.08;
+    const cfg = getTotalsConfig();
+    const tax = subtotal * cfg.taxRate;
 
     let discount = 0;
     const discountRow = document.getElementById('discountRow');
@@ -26,9 +44,9 @@ function updateCartTotals() {
 
     let shipping = 0;
     const shippingElement = document.getElementById('shipping');
-    if (subtotal < 50 && subtotal > 0) {
-        shipping = 5.99;
-        shippingElement.innerHTML = 'R5.99';
+    if (!discountFreeShipping && subtotal < cfg.freeThreshold && subtotal > 0) {
+        shipping = cfg.standardRate;
+        shippingElement.innerHTML = 'R' + cfg.standardRate.toFixed(2);
         shippingElement.classList.remove('text-success');
     } else {
         shippingElement.innerHTML = 'FREE';
@@ -157,6 +175,11 @@ function applyDiscount() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // FIX: remember when the code is FREESHIP so updateCartTotals()
+                // keeps shipping at FREE instead of re-applying the R50 rule
+                // and overwriting it on a sub-R50 cart.
+                discountFreeShipping = (data.discountType === 'FreeShipping');
+
                 if (data.discountType === 'FreeShipping') {
                     const shippingEl = document.getElementById('shipping');
                     shippingEl.innerHTML = 'FREE';
@@ -185,6 +208,10 @@ function applyDiscount() {
 
 // Initialise all event listeners
 function initCartPage() {
+    // Seed the free-shipping state from what the server rendered (the cart
+    // summary is server-computed, so a FREESHIP code survives a reload).
+    discountFreeShipping = document.getElementById('totalsConfig')?.dataset.freeship === 'true';
+
     updateCartTotals();
 
     document.querySelectorAll('.qty-increase').forEach(btn => {

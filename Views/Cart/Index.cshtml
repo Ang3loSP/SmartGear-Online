@@ -30,6 +30,21 @@
         </p>
     </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     @if (Model != null && Model.Count > 0)
     {
         <div class="row">
@@ -101,15 +116,15 @@
                                         <td class="align-middle">
                                             <div class="input-group quantity-control" style="width: 150px;">
                                                 <button class="btn btn-outline-secondary qty-btn qty-decrease"
-                                                        type="button" title="Decrease Quantity">
+                                                        type="button" title="Decrease Quantity" aria-label="Decrease quantity for @item.ProductName">
                                                     <i class="fas fa-minus"></i>
                                                 </button>
 
                                                 <input type="number" class="form-control text-center qty-input"
-                                                       value="@item.Quantity" min="1" max="100" data-item-id="@item.CartItemId">
+                                                       value="@item.Quantity" min="1" max="100" data-item-id="@item.CartItemId" aria-label="Quantity for @item.ProductName">
 
                                                 <button class="btn btn-outline-secondary qty-btn qty-increase"
-                                                        type="button" title="Increase Quantity">
+                                                        type="button" title="Increase Quantity" aria-label="Increase quantity for @item.ProductName">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
                                             </div>
@@ -125,7 +140,7 @@
                                         <!-- Remove Button -->
                                         <td class="align-middle">
                                             <button type="button" class="btn btn-outline-danger remove-item-btn"
-                                                    data-item-id="@item.CartItemId" title="Remove Item">
+                                                    data-item-id="@item.CartItemId" title="Remove Item" aria-label="Remove @item.ProductName from cart">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </td>
@@ -154,36 +169,52 @@
                     </div>
 
                     <div class="card-body">
+                        <!-- Total config comes from OrderSettings, the same
+                             values OrderService uses server-side. The summary
+                             values below are rendered by the server too, so the
+                             numbers are correct before/without JS and after a
+                             reload. -->
+                        <div id="totalsConfig" class="d-none"
+                             data-tax="@(((decimal)ViewBag.TotalsConfig.TaxRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                             data-threshold="@(((decimal)ViewBag.TotalsConfig.FreeThreshold).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                             data-standard="@(((decimal)ViewBag.TotalsConfig.StandardRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                             data-express="@(((decimal)ViewBag.TotalsConfig.ExpressRate).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))"
+                             data-discount="@(((decimal)ViewBag.CartSummary.Discount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))"
+                             data-freeship="@((ViewBag.CartSummary.IsFreeShipping == true) ? "true" : "false")"></div>
+
                         <!-- Subtotal -->
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal:</span>
-                            <span id="subtotal">R0.00</span>
+                            <span id="subtotal">R@(((decimal)ViewBag.CartSummary.Subtotal).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))</span>
                         </div>
 
                         <!-- Shipping -->
                         <div class="d-flex justify-content-between mb-2">
                             <span>Shipping:</span>
-                            <span id="shipping" class="text-success fw-bold">FREE</span>
+                            <span id="shipping"
+                                  class="@(((decimal)ViewBag.CartSummary.Shipping) == 0 ? "text-success fw-bold" : "")">@(((decimal)ViewBag.CartSummary.Shipping) == 0 ? "FREE" : "R" + ((decimal)ViewBag.CartSummary.Shipping).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))</span>
                         </div>
 
-                        <!-- Discount -->
+                        <!-- Discount (shown once a code is applied, and it stays
+                             visible across reloads because it comes from the
+                             saved cart) -->
                         <div class="d-flex justify-content-between mb-3 pb-3 border-bottom"
-                             id="discountRow" style="display: none;">
+                             id="discountRow" style="display: @(((decimal)ViewBag.CartSummary.Discount) > 0 ? "flex" : "none");">
                             <span>Discount:</span>
-                            <span id="discountAmount" class="text-success">-R0.00</span>
+                            <span id="discountAmount" class="text-success">-R@(((decimal)ViewBag.CartSummary.Discount).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))</span>
                         </div>
 
                         <!-- Tax -->
                         <div class="d-flex justify-content-between mb-3">
-                            <span>Tax (8%):</span>
-                            <span id="tax">R0.00</span>
+                            <span>Tax (@(((decimal)ViewBag.TotalsConfig.TaxPercent).ToString("0.##"))%):</span>
+                            <span id="tax">R@(((decimal)ViewBag.CartSummary.Tax).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))</span>
                         </div>
 
                         <!-- Total -->
                         <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-top pt-3">
                             <strong class="fs-5">Total:</strong>
                             <h5 class="text-primary fw-bold mb-0">
-                                R<span id="total">0.00</span>
+                                R<span id="total">@(((decimal)ViewBag.CartSummary.GrandTotal).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))</span>
                             </h5>
                         </div>
 
@@ -199,9 +230,9 @@
                                     Apply
                                 </button>
                             </div>
-                            <small class="text-muted d-block mt-2">
-                                Try: SAVE10, SAVE20, or FIRST25
-                            </small>
+<small class="text-muted d-block mt-2">
+                                    Try: WELCOME10, SAVE20, FREESHIP, or FLAT25
+                                </small>
                         </div>
 
                         <!-- Checkout Button -->

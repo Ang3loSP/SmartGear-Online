@@ -8,10 +8,12 @@ namespace SmartGear_Online.Repositories
     {
         Task<Order?> GetOrderByIdAsync(int id);
         Task<List<Order>> GetCustomerOrdersAsync(string customerId);
-        Task<int> CreateOrderAsync(Order order);
-        Task UpdateOrderAsync(Order order);
-        Task<bool> AddOrderItemAsync(OrderItem item);
-        Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus);
-        Task<List<Order>> GetAllOrdersAsync();
+
+        /// <summary>
+        /// The most recent <paramref name="count"/> orders (with customer +
+        /// items) — used by the dashboard so it never has to load every order
+        /// just to render the "recent orders" panel.
+        /// </summary>
+        Task<List<Order>> GetRecentOrdersAsync(int count);
     }
 }

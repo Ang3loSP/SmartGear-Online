@@ -50,6 +50,13 @@ namespace SmartGear_Online.Repositories
         private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(30);
         private static readonly TimeSpan ShortCacheExpiration = TimeSpan.FromMinutes(5);
 
+        // Search results are cached per-query. An attacker (or an aggressive
+        // bot) could otherwise grow the cache unboundedly with unique search
+        // strings, so the number of distinct cached search keys is capped and
+        // the oldest key is evicted on overflow.
+        private const int MaxCachedSearchKeys = 200;
+        private readonly Queue<string> _searchCacheKeys = new();
+
         public ProductRepository(ApplicationDbContext context,
                                ILogger<ProductRepository> logger,
                                IMemoryCache cache)  // QUESTION 11.2: Added IMemoryCache dependency
@@ -115,6 +122,28 @@ namespace SmartGear_Online.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving products");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Total active (not soft-deleted) products. Reuses the same all-products
+        /// cache entry the paged listing reads from, so the count and the page
+        /// contents can never disagree — adding/updating/deleting bumps the
+        /// generation stamp and both fall out of cache together.
+        /// </summary>
+        public async Task<int> GetProductCountAsync()
+        {
+            try
+            {
+                if (_cache.TryGetValue(AllProductsCacheKey, out List<Product>? cachedProducts))
+                    return cachedProducts?.Count ?? 0;
+
+                return await _context.Products.CountAsync(p => p.IsActive);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving product count");
                 throw;
             }
         }
@@ -246,7 +275,18 @@ namespace SmartGear_Online.Repositories
                     .OrderBy(p => p.ProductName)
                     .ToListAsync();
 
-                // Cache search results for 5 minutes (short expiration)
+                // Cache search results for 5 minutes (short expiration).
+                // Bound the total number of cached search keys so unique
+                // queries cannot grow memory without limit.
+                if (!_searchCacheKeys.Contains(cacheKey))
+                {
+                    _searchCacheKeys.Enqueue(cacheKey);
+                    while (_searchCacheKeys.Count > MaxCachedSearchKeys)
+                    {
+                        _cache.Remove(_searchCacheKeys.Dequeue());
+                    }
+                }
+
                 var cacheOptions = new MemoryCacheEntryOptions()
                     .SetSlidingExpiration(ShortCacheExpiration)
                     .SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
@@ -416,80 +456,6 @@ namespace SmartGear_Online.Repositories
         // =====================================================
         // BUSINESS OPERATIONS WITH CACHE INVALIDATION
         // =====================================================
-
-        /// <summary>
-        /// QUESTION 11.2: ReduceInventoryAsync with cache invalidation
-        /// Clears product cache when inventory changes.
-        /// DATA INTEGRITY: now an atomic conditional UPDATE — stock is only
-        /// decremented when the row genuinely has enough, so concurrent
-        /// checkouts cannot oversell.
-        /// </summary>
-        public async Task<bool> ReduceInventoryAsync(int productId, int quantity)
-        {
-            try
-            {
-                _logger.LogInformation("ProductRepository.ReduceInventoryAsync({ProductId}, {Quantity})", productId, quantity);
-
-                if (quantity <= 0)
-                    return false;
-
-                var updated = await _context.Products
-                    .Where(p => p.ProductId == productId && p.QuantityInStock >= quantity)
-                    .ExecuteUpdateAsync(p => p.SetProperty(
-                        x => x.QuantityInStock,
-                        x => x.QuantityInStock - quantity));
-
-                if (updated > 0)
-                {
-                    // FIX: stock is surfaced on the browse/search/category
-                    // listings, so an inventory change must invalidate the
-                    // listing caches as well as the single-product entry.
-                    InvalidateProductCaches();
-                    InvalidateProductCache(productId);
-                }
-
-                return updated > 0;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error reducing inventory");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// DATA INTEGRITY: atomically restores stock (order cancellation).
-        /// Returns the number of rows updated.
-        /// </summary>
-        public async Task<int> ReplenishInventoryAsync(int productId, int quantity)
-        {
-            try
-            {
-                _logger.LogInformation("ProductRepository.ReplenishInventoryAsync({ProductId}, {Quantity})", productId, quantity);
-
-                if (quantity <= 0)
-                    return 0;
-
-                var updated = await _context.Products
-                    .Where(p => p.ProductId == productId)
-                    .ExecuteUpdateAsync(p => p.SetProperty(
-                        x => x.QuantityInStock,
-                        x => x.QuantityInStock + quantity));
-
-                if (updated > 0)
-                {
-                    InvalidateProductCaches();
-                    InvalidateProductCache(productId);
-                }
-
-                return updated;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error replenishing inventory");
-                throw;
-            }
-        }
 
         // =====================================================
         // QUESTION 11.2: CACHE INVALIDATION METHODS

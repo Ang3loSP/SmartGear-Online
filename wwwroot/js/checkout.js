@@ -16,6 +16,22 @@
         updateShipping();
     }
 
+    // Live business rules + discount state rendered by the server (OrderSettings).
+    function getTotalsConfig() {
+        var el = document.getElementById('totalsConfig');
+        if (!el) {
+            return { taxRate: 0.08, threshold: 50, standard: 5.99, express: 15.00, discount: 0, freeShip: false };
+        }
+        return {
+            taxRate: parseFloat(el.dataset.tax) || 0.08,
+            threshold: parseFloat(el.dataset.threshold) || 50,
+            standard: parseFloat(el.dataset.standard) || 5.99,
+            express: parseFloat(el.dataset.express) || 15.00,
+            discount: parseFloat(el.dataset.discount) || 0,
+            freeShip: el.dataset.freeship === 'true'
+        };
+    }
+
     // Called from the Standard/Express radio buttons (onchange="updateShipping()")
     window.updateShipping = function () {
         var subtotalEl = document.getElementById('summarySubtotal');
@@ -28,16 +44,20 @@
         var subtotal = parseFloat(subtotalEl.textContent.replace(/[R$]/g, '').replace(',', '')) || 0;
         var tax = parseFloat(taxEl.textContent.replace(/[R$]/g, '').replace(',', '')) || 0;
 
+        var cfg = getTotalsConfig();
         var express = document.getElementById('expressShipping');
         var standard = document.getElementById('standardShipping');
 
-        // Same shipping rule as the server (Services/OrderService.cs):
-        // Standard = R5.99 under R50, FREE at R50+; Express = flat R15.00.
+        // Same rules as the server (Services/OrderService.cs):
+        // Standard = rate under the threshold, FREE at/over it; Express = flat
+        // rate; the FREESHIP code makes shipping free regardless of method.
         var shipping = 0;
-        if (express && express.checked) {
-            shipping = 15.00;
-        } else if (standard && standard.checked && subtotal < 50) {
-            shipping = 5.99;
+        if (!cfg.freeShip) {
+            if (express && express.checked) {
+                shipping = cfg.express;
+            } else if (standard && standard.checked && subtotal < cfg.threshold) {
+                shipping = cfg.standard;
+            }
         }
 
         if (shipping === 0) {
@@ -48,7 +68,9 @@
             shippingEl.classList.remove('text-success');
         }
 
-        var total = subtotal + tax + shipping;
+        // FIX: the discount is subtracted here too, otherwise switching shipping
+        // methods silently dropped the discount and showed a bogus total.
+        var total = subtotal + tax + shipping - cfg.discount;
         totalEl.textContent = total.toFixed(2);
 
         // Keep the tax read-out truthful even if shipping changes.

@@ -26,12 +26,23 @@ namespace SmartGear_Online.Middleware
             var method = context.Request.Method;
             var queryString = context.Request.QueryString;
 
+            // The query string is only logged at Debug level — it can carry
+            // sensitive values (tokens, PII) and is not needed in the standard
+            // request log.
             _logger.LogInformation(
-                "Request: {Method} {Path}{QueryString} at {Timestamp}",
+                "Request: {Method} {Path} at {Timestamp}",
                 method,
                 path,
-                queryString,
                 startTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+
+            if (queryString.HasValue)
+            {
+                _logger.LogDebug(
+                    "Request query string: {QueryString} for {Method} {Path}",
+                    queryString,
+                    method,
+                    path);
+            }
 
             if (context.User?.Identity?.IsAuthenticated == true)
             {

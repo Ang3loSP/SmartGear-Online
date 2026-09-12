@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SmartGear_Online.Models;
 using SmartGear_Online.Models.ViewModels;
 using SmartGear_Online.Repositories;
@@ -19,6 +20,8 @@ namespace SmartGear_Online.Controllers
         private readonly ICartService _cartService;
         private readonly IOrderService _orderService;
         private readonly IEmailQueue _emailQueue;
+        private readonly IOptions<EmailOptions> _emailOptions;
+        private readonly IOptions<OrderSettings> _orderSettings;
         private readonly ILogger<OrderController> _logger;
 
         public OrderController(
@@ -26,12 +29,16 @@ namespace SmartGear_Online.Controllers
             ICartService cartService,
             IOrderService orderService,
             IEmailQueue emailQueue,
+            IOptions<EmailOptions> emailOptions,
+            IOptions<OrderSettings> orderSettings,
             ILogger<OrderController> logger)
         {
             _orderRepository = orderRepository;
             _cartService = cartService;
             _orderService = orderService;
             _emailQueue = emailQueue;
+            _emailOptions = emailOptions;
+            _orderSettings = orderSettings;
             _logger = logger;
         }
 
@@ -67,9 +74,12 @@ namespace SmartGear_Online.Controllers
                     Subtotal = totals.Subtotal,
                     Tax = totals.TaxAmount,
                     ShippingCost = totals.ShippingCost,
+                    DiscountCode = shoppingCart.DiscountCode,
                     DiscountAmount = totals.DiscountAmount,
                     GrandTotal = totals.GrandTotal
                 };
+
+                PopulateTotalsViewState(shoppingCart.DiscountCode);
 
                 return View(checkoutModel);
             }
@@ -113,8 +123,11 @@ namespace SmartGear_Online.Controllers
                     model.Subtotal = totals.Subtotal;
                     model.Tax = totals.TaxAmount;
                     model.ShippingCost = totals.ShippingCost;
+                    model.DiscountCode = shoppingCart.DiscountCode;
                     model.DiscountAmount = totals.DiscountAmount;
                     model.GrandTotal = totals.GrandTotal;
+
+                    PopulateTotalsViewState(shoppingCart.DiscountCode);
 
                     return View("Checkout", model);
                 }
@@ -159,6 +172,36 @@ namespace SmartGear_Online.Controllers
         }
 
         // ================================================
+        // Helpers
+        // ================================================
+        // Gives the checkout view the same live business rules the server
+        // calculator uses (tax, threshold, shipping rates) plus whether a
+        // FreeShipping code is active, so checkout.js recomputes with numbers
+        // that match OrderService.CalculateOrderTotalsAsync exactly.
+        private void PopulateTotalsViewState(string? discountCode)
+        {
+            var settings = _orderSettings.Value;
+
+            var isFreeShippingDiscount = false;
+            if (!string.IsNullOrWhiteSpace(discountCode))
+            {
+                var result = _orderService.ApplyDiscount(discountCode, 0);
+                isFreeShippingDiscount = result.IsValid &&
+                                         result.DiscountType == "FreeShipping";
+            }
+
+            ViewBag.FreeShippingApplied = isFreeShippingDiscount;
+            ViewBag.TotalsConfig = new
+            {
+                TaxRate = settings.TaxRate ?? 0.08m,
+                TaxPercent = (settings.TaxRate ?? 0.08m) * 100,
+                FreeThreshold = settings.FreeShippingThreshold ?? 50,
+                StandardRate = settings.StandardShippingRate ?? 5.99m,
+                ExpressRate = settings.ExpressShippingRate ?? 15.00m
+            };
+        }
+
+        // ================================================
         // ORDER CONFIRMATION
         // ================================================
         [HttpGet]
@@ -174,6 +217,12 @@ namespace SmartGear_Online.Controllers
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (order.CustomerId != userId && !User.IsInRole("Admin"))
                     return Unauthorized("You don't have permission to view this order");
+
+                // Tell the view whether a confirmation email actually went out
+                // (or will go out via the worker): with no SMTP host configured
+                // the worker only logs, so the page must not claim it was sent.
+                ViewData["EmailEnabled"] =
+                    !string.IsNullOrWhiteSpace(_emailOptions.Value.Host);
 
                 return View(order);
             }

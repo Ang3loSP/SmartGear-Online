@@ -5,10 +5,25 @@
 *@
 
 @using SmartGear_Online.Models
+@using System
 @model List<Product>
 
 @{
     ViewData["Title"] = "Products - SmartGear Online";
+
+    // Server-side pagination state (set by ProductController.Index). Search
+    // and category results render this same view without these keys, so the
+    // pager simply isn't shown for those.
+    var currentPage = (int?)ViewData["Page"] ?? 1;
+    var pageSize = (int?)ViewData["PageSize"] ?? 12;
+    var totalPages = (int?)ViewData["TotalPages"] ?? 1;
+
+    var pages = new List<int>();
+    for (int i = 1; i <= totalPages; i++)
+    {
+        if (i == 1 || i == totalPages || Math.Abs(i - currentPage) <= 2)
+            pages.Add(i);
+    }
 }
 
 <div class="container-fluid my-5">
@@ -80,7 +95,7 @@
                     <div class="mb-4">
                         <h6 class="fw-bold mb-3">Stock Status</h6>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="inStockOnly" checked>
+                            <input class="form-check-input" type="checkbox" id="inStockOnly" checked onchange="applyFilters()">
                             <label class="form-check-label" for="inStockOnly">In Stock Only</label>
                         </div>
                     </div>
@@ -198,15 +213,31 @@
                 </div>
 
                 <!-- Pagination -->
-                <nav aria-label="Page navigation" class="mt-5">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                    </ul>
-                </nav>
+                @if (ViewData["TotalPages"] != null && totalPages > 1)
+                {
+                    <nav aria-label="Page navigation" class="mt-5">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", "Product", new { page = currentPage - 1, pageSize })">Previous</a>
+                            </li>
+
+                            @for (var p = 0; p < pages.Count; p++)
+                            {
+                                if (p > 0 && pages[p] - pages[p - 1] > 1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                <li class="page-item @(pages[p] == currentPage ? "active" : "")">
+                                    <a class="page-link" href="@Url.Action("Index", "Product", new { page = pages[p], pageSize })">@pages[p]</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", "Product", new { page = currentPage + 1, pageSize })">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
             }
             else
             {
@@ -223,20 +254,43 @@
 
 @section Scripts {
     <script>
-        function filterByPrice() {
+        // Snapshot of the server-rendered order so "Clear All Filters" can
+        // undo any client-side sorting.
+        var originalProductOrder = [];
+
+        function applyFilters() {
             const minPrice = parseFloat(document.getElementById('priceMin').value) || 0;
             const maxPrice = parseFloat(document.getElementById('priceMax').value) || Infinity;
+            const inStockOnly = document.getElementById('inStockOnly').checked;
+
             document.querySelectorAll('.product-item').forEach(item => {
                 const price = parseFloat(item.dataset.price);
-                item.style.display = (price >= minPrice && price <= maxPrice) ? 'block' : 'none';
+                const stock = parseInt(item.dataset.stock, 10) || 0;
+                const withinPrice = price >= minPrice && price <= maxPrice;
+                const hasStock = !inStockOnly || stock > 0;
+                item.style.display = (withinPrice && hasStock) ? 'block' : 'none';
             });
+        }
+
+        function filterByPrice() {
+            applyFilters();
         }
 
         function clearFilters() {
             document.getElementById('priceMin').value = '0';
             document.getElementById('priceMax').value = '500';
             document.getElementById('inStockOnly').checked = true;
-            document.querySelectorAll('.product-item').forEach(item => item.style.display = 'block');
+            const searchInput = document.getElementById('productSearch');
+            if (searchInput) searchInput.value = '';
+            applyFilters();
+
+            // Restore the original server order — client-side sorting is a
+            // transient view state and shouldn't survive a "clear".
+            const grid = document.getElementById('productsGrid');
+            if (grid && originalProductOrder.length > 0) {
+                grid.innerHTML = '';
+                originalProductOrder.forEach(item => grid.appendChild(item));
+            }
         }
 
         function sortBy(criterion) {
@@ -255,6 +309,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('productsGrid');
+            if (grid) originalProductOrder = Array.from(grid.querySelectorAll('.product-item'));
+
             document.querySelectorAll('.product-card').forEach(card => {
                 card.addEventListener('mouseenter', function() { this.classList.add('shadow-lg'); });
                 card.addEventListener('mouseleave', function() { this.classList.remove('shadow-lg'); });

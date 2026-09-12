@@ -190,6 +190,7 @@
                     pmBtn.className = 'btn btn-sm btn-outline-primary';
                     pmBtn.innerHTML = '<i class="fas fa-lock"></i>';
                     pmBtn.title = 'Private message ' + u.userName;
+                    pmBtn.setAttribute('aria-label', 'Send a private message to ' + u.userName);
                     pmBtn.addEventListener('click', function () {
                         setPrivateTarget(u);
                     });

@@ -80,8 +80,12 @@ namespace SmartGear_Online.Services
 
                 // Shipping rule (matches the checkout UI): Express is a flat
                 // R15.00; Standard is free over the threshold, otherwise R5.99;
-                // the FREESHIP code makes shipping free regardless.
+                // the FREESHIP code makes shipping free regardless. Rates come
+                // from OrderSettings so the UI and the calculator can never
+                // drift apart.
                 var freeShippingThreshold = _orderSettings.FreeShippingThreshold ?? 50;
+                var standardRate = _orderSettings.StandardShippingRate ?? 5.99m;
+                var expressRate = _orderSettings.ExpressShippingRate ?? 15.00m;
                 var isExpress = string.Equals(shippingMethod, "Express", StringComparison.OrdinalIgnoreCase);
                 var isFreeShipping = !isExpress && subtotal >= freeShippingThreshold;
 
@@ -107,7 +111,7 @@ namespace SmartGear_Online.Services
 
                 var shippingCost = freeShippingDiscount || isFreeShipping
                     ? 0m
-                    : (isExpress ? 15.00m : 5.99m);
+                    : (isExpress ? expressRate : standardRate);
 
                 var grandTotal = subtotal + taxAmount + shippingCost - discountAmount;
 
@@ -322,6 +326,24 @@ namespace SmartGear_Online.Services
                 order.DiscountAmount = totals.DiscountAmount;
             }
 
+            // Configurable business limits (OrderSettings.MaxOrderValue /
+            // MaxItemsPerOrder). Enforced here, the single authoritative point,
+            // so the numbers the site advertises can never be exceeded.
+            var maxOrderValue = _orderSettings.MaxOrderValue;
+            if (maxOrderValue.HasValue && totals.GrandTotal > maxOrderValue.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Your order total exceeds the maximum allowed of R{maxOrderValue.Value:N2}.");
+            }
+
+            var maxItemsPerOrder = _orderSettings.MaxItemsPerOrder;
+            var totalQuantity = cart.Items.Sum(i => i.Quantity);
+            if (maxItemsPerOrder.HasValue && totalQuantity > maxItemsPerOrder.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Your order exceeds the maximum of {maxItemsPerOrder.Value} items per order.");
+            }
+
             order.OrderItems = cart.Items.Select(item => new OrderItem
             {
                 ProductId = item.ProductId,
@@ -434,6 +456,22 @@ namespace SmartGear_Online.Services
                 // One transaction: status + optional stock restore.
                 await using var transaction = await _context.Database.BeginTransactionAsync();
 
+                // The status flip itself is a conditional UPDATE keyed on the
+                // status we read moments ago, so two concurrent transitions can
+                // never both win — the loser matches zero rows, rolls back and
+                // never reaches the stock restore below (no double restore).
+                var rowsUpdated = await _context.Orders
+                    .Where(o => o.OrderId == orderId && o.Status == current)
+                    .ExecuteUpdateAsync(o => o
+                        .SetProperty(x => x.Status, newStatus)
+                        .SetProperty(x => x.UpdatedDate, DateTime.UtcNow));
+
+                if (rowsUpdated == 0)
+                {
+                    throw new InvalidOperationException(
+                        "This order's status was changed by another request. Please refresh and try again.");
+                }
+
                 if (newStatus == OrderStatus.Cancelled)
                 {
                     foreach (var item in order.OrderItems)
@@ -445,10 +483,6 @@ namespace SmartGear_Online.Services
                                 x => x.QuantityInStock + item.Quantity));
                     }
                 }
-
-                order.Status = newStatus;
-                order.UpdatedDate = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
 

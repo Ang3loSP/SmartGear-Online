@@ -246,7 +246,7 @@
                                 <p class="card-text small text-muted">${product.description?.substring(0, 60) || ''}...</p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="text-primary fw-bold">R${product.price.toFixed(2)}</span>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.productId}, '${product.productName}')">
+                                    <button class="btn btn-sm btn-danger" onclick="deleteProduct(${product.productId}, '${product.productName}')" aria-label="Delete product ${product.productName}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>

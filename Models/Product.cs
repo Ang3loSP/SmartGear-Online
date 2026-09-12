@@ -27,7 +27,7 @@ namespace SmartGear_Online.Models
         [Range(0.01, 10000,
             ErrorMessage = "Price must be between R0.01 & R10,000")]
         [DataType(DataType.Currency)]
-        [Display(Name = "Price ($)")]
+        [Display(Name = "Price (R)")]
         public decimal Price { get; set; }
 
         [Required(ErrorMessage = "Description is required")]
@@ -97,7 +97,7 @@ namespace SmartGear_Online.Models
         /// </summary>
         public bool CanFulfillOrder(int quantityRequested)
         {
-            return quantityRequested > 0 & quantityRequested <= QuantityInStock;
+            return quantityRequested > 0 && quantityRequested <= QuantityInStock;
         }
 
         /// <summary>

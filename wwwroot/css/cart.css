@@ -6,8 +6,9 @@
     transition: all 0.3s ease;
 }
 
+    /* No white glow on hover — the row background stays the card's glass. */
     .cart-item:hover {
-        background-color: #f8f9fa;
+        background-color: transparent;
     }
 
 .quantity-control input {

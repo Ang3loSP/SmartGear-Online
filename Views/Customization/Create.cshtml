@@ -133,9 +133,9 @@
                             <label class="form-label fw-bold"><i class="fas fa-boxes me-2"></i> Step 4: Select Quantity</label>
                             <p class="text-muted small">How many items would you like to order?</p>
                             <div class="input-group mb-3">
-                                <button class="btn btn-outline-secondary" type="button" onclick="decrementQuantity()"><i class="fas fa-minus"></i></button>
-                                <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="@Model.QuantityInStock" onchange="updatePreview()">
-                                <button class="btn btn-outline-secondary" type="button" onclick="incrementQuantity()"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="decrementQuantity()" aria-label="Decrease quantity"><i class="fas fa-minus"></i></button>
+                                <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="@Model.QuantityInStock" onchange="updatePreview()" aria-label="Quantity">
+                                <button class="btn btn-outline-secondary" type="button" onclick="incrementQuantity()" aria-label="Increase quantity"><i class="fas fa-plus"></i></button>
                             </div>
                             <small class="text-muted">Available: @Model.QuantityInStock units</small>
                         </div>

@@ -12,6 +12,13 @@ namespace SmartGear_Online.Repositories
         Task<List<Product>> GetProductsAsync(int page, int pageSize);
 
         /// <summary>
+        /// Total number of active (not soft-deleted) products. Used to build
+        /// real server-side pagination on the catalog, so the pager links to
+        /// pages that actually exist.
+        /// </summary>
+        Task<int> GetProductCountAsync();
+
+        /// <summary>
         /// Returns an active (not soft-deleted) product, or null. Used for
         /// public-facing flows so deactivated products can no longer be
         /// added to carts or ordered.
@@ -36,18 +43,5 @@ namespace SmartGear_Online.Repositories
         Task AddProductAsync(Product product);
         Task UpdateProductAsync(Product product);
         Task DeleteProductAsync(int id);
-
-        /// <summary>
-        /// Atomically decrements stock with an "only if the row genuinely has
-        /// enough stock" guard (WHERE QuantityInStock >= quantity). Returns
-        /// true only when a row was actually decremented, eliminating
-        /// read-then-write oversell races.
-        /// </summary>
-        Task<bool> ReduceInventoryAsync(int productId, int quantity);
-
-        /// <summary>
-        /// Atomically restores stock (used when an order is cancelled).
-        /// </summary>
-        Task<int> ReplenishInventoryAsync(int productId, int quantity);
     }
 }

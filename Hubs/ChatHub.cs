@@ -178,6 +178,17 @@ namespace SmartGear_Online.Hubs
             var senderName = Context.User?.Identity?.Name ?? "Anonymous";
             var isAdmin = Context.User?.IsInRole("Admin") ?? false;
 
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            // Same length cap as the public SendMessage — prevents a private
+            // message from being used to spam a user's inbox.
+            if (message.Length > 500)
+            {
+                await Clients.Caller.SendAsync("ErrorMessage", "Message too long (max 500 characters)");
+                return;
+            }
+
             var targetConnection = _connectedUsers.Values
                 .FirstOrDefault(u => u.UserId == targetUserId);
 

@@ -57,7 +57,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 // ============================================================================
 
 builder.Services.Configure<OrderSettings>(builder.Configuration.GetSection("OrderSettings"));
-        builder.Services.Configure<DiscountSettings>(builder.Configuration.GetSection("Discounts"));
+builder.Services.Configure<DiscountSettings>(builder.Configuration.GetSection("Discounts"));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 
 // ============================================================================
@@ -213,6 +213,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Security headers are applied as early as possible so they cover EVERY
+// response — including static files and redirects — not just controller output.
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
@@ -222,7 +226,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 // FIX: class name corrected after renaming RequestPathLoggingMidddleware to RequestPathLoggingMiddleware
 app.UseRequestPathLogging();
-app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // ============================================================================
 // ROUTING

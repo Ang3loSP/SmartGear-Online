@@ -54,10 +54,10 @@
                                 }
                             </td>
                             <td>
-                                <a asp-controller="Admin" asp-action="EditProduct" asp-route-id="@product.ProductId" class="btn btn-outline-primary">
+                                <a asp-controller="Admin" asp-action="EditProduct" asp-route-id="@product.ProductId" class="btn btn-outline-primary" title="Edit @product.ProductName" aria-label="Edit @product.ProductName">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button class="btn btn-outline-danger" onclick="deleteProduct(@product.ProductId)">
+                                <button class="btn btn-outline-danger" onclick="deleteProduct(@product.ProductId)" title="Delete @product.ProductName" aria-label="Delete @product.ProductName">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>

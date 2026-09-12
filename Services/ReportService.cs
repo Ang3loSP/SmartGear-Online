@@ -158,40 +158,57 @@ namespace SmartGear_Online.Services
             {
                 _logger.LogInformation("Getting daily revenue from {StartDate} to {EndDate}", startDate, endDate);
 
-                var orders = await _context.Orders
-                    .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != OrderStatus.Cancelled)
-                    .Include(o => o.OrderItems)
-                    .ToListAsync();
+                // Aggregate in the database (GROUP BY) instead of pulling every
+                // order + order item into memory and grouping client-side.
+                var revenueByDate = await (from o in _context.Orders
+                                           where o.OrderDate >= startDate
+                                              && o.OrderDate <= endDate
+                                              && o.Status != OrderStatus.Cancelled
+                                           group o by o.OrderDate.Date into g
+                                           select new DailyRevenue
+                                           {
+                                               Date = g.Key,
+                                               Revenue = g.Sum(x => x.TotalPrice),
+                                               OrderCount = g.Count(),
+                                               ItemsSold = 0
+                                           }).ToListAsync();
 
-                var dailyRevenue = orders
-                    .GroupBy(o => o.OrderDate.Date)
-                    .Select(g => new DailyRevenue
-                    {
-                        Date = g.Key,
-                        Revenue = g.Sum(o => o.TotalPrice),
-                        OrderCount = g.Count(),
-                        ItemsSold = g.Sum(o => o.OrderItems.Sum(oi => oi.Quantity))
-                    })
-                    .OrderBy(d => d.Date)
-                    .ToList();
+                var itemsByDate = await (from oi in _context.OrderItems
+                                         join o in _context.Orders on oi.OrderId equals o.OrderId
+                                         where o.OrderDate >= startDate
+                                            && o.OrderDate <= endDate
+                                            && o.Status != OrderStatus.Cancelled
+                                         group oi by o.OrderDate.Date into g
+                                         select new { Date = g.Key, Items = g.Sum(x => x.Quantity) })
+                                        .ToDictionaryAsync(x => x.Date, x => x.Items);
 
+                var byDate = revenueByDate.ToDictionary(d => d.Date);
+
+                // Zero-fill every day in the range so charts always show a
+                // full, gapless range.
                 var allDates = new List<DateTime>();
                 for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
                 {
                     allDates.Add(date);
                 }
 
-                var completeDailyRevenue = allDates
-                    .Select(date => dailyRevenue.FirstOrDefault(d => d.Date == date) ?? new DailyRevenue
-                    {
-                        Date = date,
-                        Revenue = 0,
-                        OrderCount = 0,
-                        ItemsSold = 0
-                    })
+                return allDates
+                    .Select(date => byDate.TryGetValue(date, out var day)
+                        ? new DailyRevenue
+                        {
+                            Date = date,
+                            Revenue = day.Revenue,
+                            OrderCount = day.OrderCount,
+                            ItemsSold = itemsByDate.TryGetValue(date, out var items) ? items : 0
+                        }
+                        : new DailyRevenue
+                        {
+                            Date = date,
+                            Revenue = 0,
+                            OrderCount = 0,
+                            ItemsSold = 0
+                        })
                     .ToList();
-
-                return completeDailyRevenue;
             }
             catch (Exception ex)
             {
@@ -411,6 +428,89 @@ namespace SmartGear_Online.Services
             {
                 _logger.LogError(ex, "Error getting order statistics");
                 return new OrderStatistics();
+            }
+        }
+
+        // ================================================
+        // Get Revenue Metrics (single aggregate query)
+        // ================================================
+        public async Task<RevenueMetrics> GetRevenueMetricsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting revenue metrics");
+
+                const string cacheKey = "RevenueMetrics";
+                if (_cache.TryGetValue(cacheKey, out RevenueMetrics? cachedMetrics))
+                    return cachedMetrics!;
+
+                // Cancelled orders generate no revenue, so every figure below
+                // filters them out — matching the dashboard's existing rule.
+                var now = DateTime.UtcNow;
+                var today = now.Date;
+                var weekStart = now.AddDays(-7);
+                var monthStart = now.AddDays(-30);
+                var yearStart = now.AddYears(-1);
+
+                var row = await (from o in _context.Orders
+                                 where o.Status != OrderStatus.Cancelled
+                                 group o by 1 into g
+                                 select new RevenueMetrics
+                                 {
+                                     TotalRevenue = g.Sum(x => x.TotalPrice),
+                                     TotalOrders = g.Count(),
+                                     TodayRevenue = g.Sum(x => x.OrderDate >= today ? x.TotalPrice : 0m),
+                                     WeekRevenue = g.Sum(x => x.OrderDate >= weekStart ? x.TotalPrice : 0m),
+                                     MonthRevenue = g.Sum(x => x.OrderDate >= monthStart ? x.TotalPrice : 0m),
+                                     YearRevenue = g.Sum(x => x.OrderDate >= yearStart ? x.TotalPrice : 0m)
+                                 }).FirstOrDefaultAsync();
+
+                var metrics = row ?? new RevenueMetrics();
+                metrics.AverageOrderValue = metrics.TotalOrders > 0
+                    ? metrics.TotalRevenue / metrics.TotalOrders
+                    : 0m;
+
+                _cache.Set(cacheKey, metrics, TimeSpan.FromMinutes(5));
+                return metrics;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting revenue metrics");
+                return new RevenueMetrics();
+            }
+        }
+
+        // ================================================
+        // Get Low Stock Alerts (per-product reorder level)
+        // ================================================
+        public async Task<List<LowStockAlert>> GetLowStockByReorderLevelAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting low stock alerts by reorder level");
+
+                // Live (uncached) — matches the admin dashboard's definition of
+                // "at or below that product's own reorder level", computed with
+                // a projection so the whole Products table is never loaded.
+                return await _context.Products
+                    .Where(p => p.IsActive && p.QuantityInStock <= p.ReorderLevel)
+                    .OrderBy(p => p.QuantityInStock)
+                    .Select(p => new LowStockAlert
+                    {
+                        ProductId = p.ProductId,
+                        ProductName = p.ProductName ?? string.Empty,
+                        Category = p.Category ?? string.Empty,
+                        CurrentStock = p.QuantityInStock,
+                        ReorderLevel = p.ReorderLevel,
+                        NeededQuantity = p.ReorderLevel - p.QuantityInStock > 0 ? p.ReorderLevel - p.QuantityInStock : 0,
+                        LastRestockedDate = p.UpdatedDate
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting low stock alerts by reorder level");
+                return new List<LowStockAlert>();
             }
         }
 

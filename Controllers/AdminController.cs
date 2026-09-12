@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartGear_Online.Models;
 using SmartGear_Online.Models.ViewModels;
 using SmartGear_Online.Repositories;
+using SmartGear_Online.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,12 +17,15 @@ namespace SmartGear_Online.Controllers
     {
         private readonly IProductRepository _productRepository;
         private readonly IOrderRepository _orderRepository;
+        private readonly IReportService _reportService;
 
         public AdminController(IProductRepository productRepository,
-                               IOrderRepository orderRepository)
+                               IOrderRepository orderRepository,
+                               IReportService reportService)
         {
             _productRepository = productRepository;
             _orderRepository = orderRepository;
+            _reportService = reportService;
         }
 
         // ================================================
@@ -31,106 +35,80 @@ namespace SmartGear_Online.Controllers
         [HttpGet]
         public async Task<IActionResult> Dashboard()
         {
-            var allOrders = await _orderRepository.GetAllOrdersAsync();
-            var allProducts = await _productRepository.GetProductsAsync(1, 1000);
+            var now = DateTime.UtcNow;
+
+            // All aggregate figures come from ReportService (SQL-side
+            // aggregation with short-lived caching) + a bounded "recent
+            // orders" query — the dashboard never loads every order and every
+            // product into memory just to render itself.
+            var metrics = await _reportService.GetRevenueMetricsAsync();
+            var statistics = await _reportService.GetOrderStatisticsAsync();
+            var customerAnalytics = await _reportService.GetCustomerAnalyticsAsync();
+            var topProducts = await _reportService.GetTopProductsAsync(5);
+            var lowStock = await _reportService.GetLowStockByReorderLevelAsync();
+            var dailyRevenue = await _reportService.GetDailyRevenueAsync(now.Date.AddDays(-29), now.Date);
+            var recentOrders = await _orderRepository.GetRecentOrdersAsync(10);
 
             var model = new AdminDashboardViewModel
             {
                 // DATA INTEGRITY: revenue only counts orders that actually
                 // generated money — cancelled orders are excluded from every
                 // revenue metric below to match your sales reports.
-                TotalOrders = allOrders.Count(),
-                TotalRevenue = allOrders
-                    .Where(o => o.Status != OrderStatus.Cancelled)
-                    .Sum(o => o.TotalPrice),
-                AverageOrderValue = allOrders.Any()
-                    ? allOrders.Where(o => o.Status != OrderStatus.Cancelled).Average(o => o.TotalPrice)
-                    : 0m,
+                TotalOrders = statistics.TotalOrders + statistics.CancelledOrders,
+                TotalRevenue = metrics.TotalRevenue,
+                AverageOrderValue = metrics.AverageOrderValue,
+                TotalCustomers = customerAnalytics.TotalCustomers,
 
-                TodayRevenue = allOrders
-                    .Where(o => o.Status != OrderStatus.Cancelled &&
-                                o.OrderDate.Date == DateTime.UtcNow.Date)
-                    .Sum(o => o.TotalPrice),
-                WeekRevenue = allOrders
-                    .Where(o => o.Status != OrderStatus.Cancelled &&
-                                o.OrderDate >= DateTime.UtcNow.AddDays(-7))
-                    .Sum(o => o.TotalPrice),
-                MonthRevenue = allOrders
-                    .Where(o => o.Status != OrderStatus.Cancelled &&
-                                o.OrderDate >= DateTime.UtcNow.AddDays(-30))
-                    .Sum(o => o.TotalPrice),
+                TodayRevenue = metrics.TodayRevenue,
+                WeekRevenue = metrics.WeekRevenue,
+                MonthRevenue = metrics.MonthRevenue,
+                YearRevenue = metrics.YearRevenue,
 
                 // Cancelled orders still matter for the status counts below,
-                // so those are intentionally NOT filtered here.
-                PendingOrders = allOrders.Count(o => o.Status == OrderStatus.Pending),
-                ConfirmedOrders = allOrders.Count(o => o.Status == OrderStatus.Confirmed),
-                ProductionOrders = allOrders.Count(o => o.Status == OrderStatus.InProduction),
-                ShippedOrders = allOrders.Count(o => o.Status == OrderStatus.Shipped),
-                DeliveredOrders = allOrders.Count(o => o.Status == OrderStatus.Delivered),
-                CancelledOrders = allOrders.Count(o => o.Status == OrderStatus.Cancelled),
+                // so those are intentionally used as-is from the stats.
+                PendingOrders = statistics.PendingOrders,
+                ConfirmedOrders = statistics.ConfirmedOrders,
+                ProductionOrders = statistics.ProductionOrders,
+                ShippedOrders = statistics.ShippedOrders,
+                DeliveredOrders = statistics.DeliveredOrders,
+                CancelledOrders = statistics.CancelledOrders,
 
-                LowStockAlerts = allProducts
-                    .Where(p => p.QuantityInStock <= p.ReorderLevel)
-                    .Select(p => new LowStockAlertViewModel
-                    {
-                        ProductId = p.ProductId,
-                        ProductName = p.ProductName,
-                        CurrentStock = p.QuantityInStock,
-                        ReorderLevel = p.ReorderLevel
-                    }).ToList(),
+                LowStockAlerts = lowStock.Select(l => new LowStockAlertViewModel
+                {
+                    ProductId = l.ProductId,
+                    ProductName = l.ProductName,
+                    CurrentStock = l.CurrentStock,
+                    ReorderLevel = l.ReorderLevel
+                }).ToList(),
 
-                RecentOrders = allOrders
-                    .OrderByDescending(o => o.OrderDate)
-                    .Take(10)
-                    .Select(o => new RecentOrderViewModel
-                    {
-                        OrderId = o.OrderId,
-                        CustomerName = o.Customer?.FullName ?? "Unknown",
-                        OrderDate = o.OrderDate,
-                        TotalPrice = o.TotalPrice,
-                        Status = o.Status
-                    }).ToList(),
+                RecentOrders = recentOrders.Select(o => new RecentOrderViewModel
+                {
+                    OrderId = o.OrderId,
+                    CustomerName = o.Customer?.FullName ?? "Unknown",
+                    OrderDate = o.OrderDate,
+                    TotalPrice = o.TotalPrice,
+                    Status = o.Status
+                }).ToList(),
 
-                TopProducts = allOrders
-                    .SelectMany(o => o.OrderItems)
-                    .GroupBy(oi => oi.ProductId)
-                    .Select(g => new TopProductViewModel
-                    {
-                        ProductId = g.Key,
-                        ProductName = g.First().Product?.ProductName ?? "Unknown",
-                        Category = g.First().Product?.Category ?? "N/A",
-                        UnitsSold = g.Sum(oi => oi.Quantity),
-                        Revenue = g.Sum(oi => oi.Quantity * oi.UnitPrice),
-                        Trend = 0
-                    })
-                    .OrderByDescending(p => p.Revenue)
-                    .Take(5)
-                    .ToList(),
+                TopProducts = topProducts.Select(p => new TopProductViewModel
+                {
+                    ProductId = p.ProductId,
+                    ProductName = p.ProductName,
+                    Category = p.Category,
+                    UnitsSold = p.QuantitySold,
+                    Revenue = p.Revenue,
+                    Trend = 0
+                }).ToList(),
 
-                DailyRevenue = BuildDailyRevenue(allOrders)
+                DailyRevenue = dailyRevenue.Select(d => new DailyRevenueViewModel
+                {
+                    Date = d.Date,
+                    Revenue = d.Revenue,
+                    OrderCount = d.OrderCount
+                }).ToList()
             };
 
             return View(model);
-        }
-
-        /// <summary>
-        /// Zero-fills the last 30 days so the revenue chart always shows a full range.
-        /// </summary>
-        private static List<DailyRevenueViewModel> BuildDailyRevenue(IEnumerable<Order> orders)
-        {
-            var startDate = DateTime.UtcNow.Date.AddDays(-29);
-            return Enumerable.Range(0, 30)
-                .Select(i => startDate.AddDays(i))
-                .Select(day => new DailyRevenueViewModel
-                {
-                    Date = day,
-                    Revenue = orders
-                        .Where(o => o.Status != OrderStatus.Cancelled &&
-                                    o.OrderDate.Date == day)
-                        .Sum(o => o.TotalPrice),
-                    OrderCount = orders.Count(o => o.OrderDate.Date == day)
-                })
-                .ToList();
         }
 
         // ================================================

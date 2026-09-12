@@ -66,116 +66,24 @@ namespace SmartGear_Online.Repositories
             }
         }
 
-        public async Task<int> CreateOrderAsync(Order order)
-        {
-            try
-            {
-                if (order == null)
-                    throw new ArgumentNullException(nameof(order));
-
-                _logger.LogInformation(
-                    "OrderRepository.CreateOrderAsync() called for customer {CustomerId}",
-                    order.CustomerId);
-
-                _context.Orders.Add(order);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation(
-                    "Order created successfully: {OrderId}", order.OrderId);
-
-                return order.OrderId;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating order");
-                throw;
-            }
-        }
-
-        public async Task UpdateOrderAsync(Order order)
+        public async Task<List<Order>> GetRecentOrdersAsync(int count)
         {
             try
             {
                 _logger.LogInformation(
-                    "OrderRepository.UpdateOrderAsync({OrderId}) called", order.OrderId);
+                    "OrderRepository.GetRecentOrdersAsync({Count}) called", count);
 
-                _context.Orders.Update(order);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating order");
-                throw;
-            }
-        }
-
-        public async Task<bool> AddOrderItemAsync(OrderItem item)
-        {
-            try
-            {
-                _logger.LogInformation(
-                    "OrderRepository.AddOrderItemAsync({OrderId}, {ProductId})",
-                    item.OrderId, item.ProductId);
-
-                _context.OrderItems.Add(item);
-                await _context.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding order item");
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus)
-        {
-            try
-            {
-                _logger.LogInformation(
-                    "OrderRepository.UpdateOrderStatusAsync({OrderId}, {Status})",
-                    orderId, newStatus);
-
-                var order = await _context.Orders
-                    .FirstOrDefaultAsync(o => o.OrderId == orderId);
-
-                if (order == null)
-                    return false;
-
-                order.Status = newStatus;
-                order.UpdatedDate = DateTime.UtcNow;
-
-                _context.Orders.Update(order);
-                await _context.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating order status");
-                return false;
-            }
-        }
-
-        public async Task<List<Order>> GetAllOrdersAsync()
-        {
-            try
-            {
-                _logger.LogInformation("OrderRepository.GetAllOrdersAsync() called");
-
-                var orders = await _context.Orders
+                return await _context.Orders
                     .Include(o => o.Customer)
                     .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Product)
                     .OrderByDescending(o => o.OrderDate)
+                    .Take(Math.Max(1, count))
                     .ToListAsync();
-
-                return orders;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all orders");
+                _logger.LogError(ex, "Error retrieving recent orders");
                 throw;
             }
         }
